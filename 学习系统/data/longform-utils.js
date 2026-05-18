@@ -1,5 +1,12 @@
+function formatListItem(item) {
+  if (typeof item === 'string') return item;
+  if (item?.url) return `[${item.title || item.url}](${item.url})${item.desc ? ` - ${item.desc}` : ''}`;
+  if (item?.title) return item.title;
+  return String(item);
+}
+
 function list(items) {
-  return items.map(item => `- ${item}`).join('\n');
+  return items.map(item => `- ${formatListItem(item)}`).join('\n');
 }
 
 function refList(items) {

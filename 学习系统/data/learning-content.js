@@ -7,7 +7,7 @@ import { TESTING_QUALITY_CONTENT } from './testing-quality-content.js';
 import { SECURITY_CONTENT } from './security-content.js';
 import { RENDERING_ARCHITECTURE_CONTENT } from './rendering-architecture-content.js';
 import { STATE_DATA_CONTENT } from './state-data-content.js';
-import { VUE_SPECIAL_CONTENT } from './work-notes-content.js';
+import { DOCS_MODULES } from './docs-loader.js';
 
 export const LONGFORM_MODULES = [
   ENGINEERING_TOOLCHAIN_CONTENT,
@@ -18,7 +18,7 @@ export const LONGFORM_MODULES = [
   SECURITY_CONTENT,
   RENDERING_ARCHITECTURE_CONTENT,
   STATE_DATA_CONTENT,
-  VUE_SPECIAL_CONTENT,
+  ...DOCS_MODULES,
 ];
 
 export const LEARNING_CONTENT = {

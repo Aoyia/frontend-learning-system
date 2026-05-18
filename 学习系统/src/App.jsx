@@ -72,15 +72,6 @@ function dbDelete(db, store, key) {
   });
 }
 
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 function isAnswerCorrect(question, selected) {
   if (Array.isArray(question.answer)) {
     return Array.isArray(selected)
@@ -108,14 +99,26 @@ function withQuestionSource(module, doc, docIdx, question, quizIdx) {
   };
 }
 
-function getDocQuestions(moduleId, docIdx) {
-  const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
-  const doc = module?.docs[docIdx];
-  if (!module || !doc) return [];
-  return (doc.quiz || []).map((q, qi) => withQuestionSource(module, doc, docIdx, q, qi));
+const QUESTION_TYPE_ORDER = {
+  single: 0,
+  multiple: 1,
+  judgment: 2,
+};
+
+const QUICK_DRILL_LIMIT = 10;
+const DEFAULT_DRILL_LIMIT = 20;
+
+function orderQuestionsByType(questions) {
+  return questions
+    .map((question, originalOrder) => ({ question, originalOrder }))
+    .sort((a, b) => {
+      const typeDiff = (QUESTION_TYPE_ORDER[a.question.type] ?? 99) - (QUESTION_TYPE_ORDER[b.question.type] ?? 99);
+      return typeDiff || a.originalOrder - b.originalOrder;
+    })
+    .map(item => item.question);
 }
 
-function getModuleQuestions(moduleId) {
+function getRawModuleQuestions(moduleId) {
   const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
   if (!module) return [];
   return module.docs.flatMap((doc, docIdx) =>
@@ -123,11 +126,101 @@ function getModuleQuestions(moduleId) {
   );
 }
 
+function getDrillTypeQuotas(limit) {
+  const single = Math.max(1, Math.round(limit * 0.55));
+  const multiple = Math.max(1, Math.round(limit * 0.25));
+  return {
+    single,
+    multiple,
+    judgment: Math.max(1, limit - single - multiple),
+  };
+}
+
+function rankQuestionForDrill(question, drillStatCache) {
+  const stat = drillStatCache[question._qid];
+  if (!stat) return 0;
+  if (!stat.lastCorrect) return 1;
+  return 2;
+}
+
+function selectDrillBatch(questions, drillStatCache, limit = DEFAULT_DRILL_LIMIT) {
+  if (!limit || questions.length <= limit) return orderQuestionsByType(questions);
+
+  const quotas = getDrillTypeQuotas(limit);
+  const selected = [];
+  const selectedIds = new Set();
+  const pickFromType = (type, count) => {
+    questions
+      .filter(question => question.type === type)
+      .map((question, originalOrder) => ({ question, originalOrder }))
+      .sort((a, b) => {
+        const rankDiff = rankQuestionForDrill(a.question, drillStatCache) - rankQuestionForDrill(b.question, drillStatCache);
+        const timeDiff = (drillStatCache[a.question._qid]?.updatedAt || 0) - (drillStatCache[b.question._qid]?.updatedAt || 0);
+        return rankDiff || timeDiff || a.originalOrder - b.originalOrder;
+      })
+      .slice(0, count)
+      .forEach(({ question }) => {
+        selected.push(question);
+        selectedIds.add(question._qid);
+      });
+  };
+
+  pickFromType('single', quotas.single);
+  pickFromType('multiple', quotas.multiple);
+  pickFromType('judgment', quotas.judgment);
+
+  if (selected.length < limit) {
+    questions
+      .filter(question => !selectedIds.has(question._qid))
+      .map((question, originalOrder) => ({ question, originalOrder }))
+      .sort((a, b) => {
+        const rankDiff = rankQuestionForDrill(a.question, drillStatCache) - rankQuestionForDrill(b.question, drillStatCache);
+        const timeDiff = (drillStatCache[a.question._qid]?.updatedAt || 0) - (drillStatCache[b.question._qid]?.updatedAt || 0);
+        return rankDiff || timeDiff || a.originalOrder - b.originalOrder;
+      })
+      .slice(0, limit - selected.length)
+      .forEach(({ question }) => selected.push(question));
+  }
+
+  return orderQuestionsByType(selected);
+}
+
+function getDocQuestions(moduleId, docIdx) {
+  const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
+  const doc = module?.docs[docIdx];
+  if (!module || !doc) return [];
+  return orderQuestionsByType((doc.quiz || []).map((q, qi) => withQuestionSource(module, doc, docIdx, q, qi)));
+}
+
+function getModuleQuestions(moduleId) {
+  return orderQuestionsByType(getRawModuleQuestions(moduleId));
+}
+
+function getDrillQuestions(moduleId, drillStatCache, limit = DEFAULT_DRILL_LIMIT) {
+  const questions = getRawModuleQuestions(moduleId);
+  return selectDrillBatch(questions, drillStatCache, limit);
+}
+
 function getQuestionByQid(qid) {
   const [moduleId, docIdxText, quizIdxText] = qid.split('__');
   const docIdx = Number(docIdxText);
   const quizIdx = Number(quizIdxText);
-  return getDocQuestions(moduleId, docIdx)[quizIdx] || null;
+  return getDocQuestions(moduleId, docIdx).find(question => question._quizIdx === quizIdx) || null;
+}
+
+function createQuizState(type, moduleId, docIdx, questions) {
+  return {
+    type,
+    moduleId,
+    docIdx,
+    questions,
+    pageSize: 5,
+    currentPageIdx: 0,
+    selections: {},
+    answers: {},
+    submittedPages: [],
+    score: 0,
+  };
 }
 
 function formatAnswer(question, answer) {
@@ -139,6 +232,14 @@ function formatAnswer(question, answer) {
   return Array.isArray(answer) ? answer.map(toText).join('；') : toText(answer);
 }
 
+function sourceTypeLabel(type) {
+  if (type === 'blog') return '博客';
+  if (type === 'note') return '笔记';
+  if (type === 'official') return '官方资料';
+  if (type === 'original') return '原创';
+  return type;
+}
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -148,6 +249,7 @@ function App() {
     if (saved === 'light' || saved === 'dark') return saved;
     return 'dark';
   });
+  const [immersiveMode, setImmersiveMode] = useState(false);
   const [db, setDb] = useState(null);
   const [progressCache, setProgressCache] = useState({});
   const [drillStatCache, setDrillStatCache] = useState({});
@@ -159,7 +261,9 @@ function App() {
   const [answerCardCollapsed, setAnswerCardCollapsed] = useState(false);
   const [mobileAnswerCardOpen, setMobileAnswerCardOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [toolbarVisible, setToolbarVisible] = useState(true);
   const toastTimer = useRef(null);
+  const toolbarHideTimer = useRef(null);
   const contentRef = useRef(null);
 
   const currentModule = useMemo(
@@ -218,6 +322,66 @@ function App() {
     }
     navigate('/', { replace: true });
   }, [location.pathname, navigate]);
+
+  useEffect(() => {
+    if (page !== 'quiz' || quizState) return;
+
+    const parts = location.pathname.split('/').filter(Boolean);
+    if (parts[0] !== 'quiz') return;
+    const searchParams = new URLSearchParams(location.search);
+
+    const [, type, moduleId, docIdxText] = parts;
+    const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
+    let docIdx = null;
+    let questions = [];
+    let fallback = '/';
+
+    if (type === 'doc') {
+      fallback = module ? `/learn/${moduleId}/0` : '/learn';
+      docIdx = Number(docIdxText);
+      if (!module || !Number.isInteger(docIdx) || docIdx < 0 || docIdx >= module.docs.length) {
+        navigate(fallback, { replace: true });
+        return;
+      }
+      questions = getDocQuestions(moduleId, docIdx);
+    } else if (type === 'drill') {
+      fallback = '/drill';
+      if (!module) {
+        navigate(fallback, { replace: true });
+        return;
+      }
+      const limitParam = searchParams.get('limit');
+      const limit = limitParam === 'all' ? null : Number(limitParam) || DEFAULT_DRILL_LIMIT;
+      questions = getDrillQuestions(moduleId, drillStatCache, limit);
+    } else if (type === 'wrongbook') {
+      fallback = '/wrongbook';
+      if (!db) return;
+      const targetModuleId = moduleId === 'all' ? null : moduleId;
+      const records = Object.values(wrongBookCache)
+        .filter(record => !targetModuleId || record.moduleId === targetModuleId)
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      questions = records.map(record => getQuestionByQid(record.qid)).filter(Boolean);
+    } else {
+      navigate('/', { replace: true });
+      return;
+    }
+
+    if (!questions.length) {
+      navigate(fallback, { replace: true });
+      return;
+    }
+
+    setCurrentModuleId(moduleId);
+    setQuizState(createQuizState(type, moduleId, docIdx, orderQuestionsByType(questions)));
+    setAnswerCardCollapsed(false);
+    setMobileAnswerCardOpen(false);
+  }, [db, drillStatCache, location.pathname, location.search, navigate, page, quizState, wrongBookCache]);
+
+  useEffect(() => {
+    if (page === 'result' && !quizState) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate, page, quizState]);
 
   useEffect(() => {
     let alive = true;
@@ -294,6 +458,34 @@ function App() {
     window.localStorage.setItem('learn-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.dataset.immersive = immersiveMode ? 'true' : '';
+    if (!immersiveMode) {
+      clearTimeout(toolbarHideTimer.current);
+      setToolbarVisible(true);
+      return;
+    }
+    setToolbarVisible(true);
+    toolbarHideTimer.current = setTimeout(() => setToolbarVisible(false), 3000);
+    const onKey = (e) => { if (e.key === 'Escape') setImmersiveMode(false); };
+    const onMouseMove = () => {
+      setToolbarVisible(true);
+      clearTimeout(toolbarHideTimer.current);
+      toolbarHideTimer.current = setTimeout(() => setToolbarVisible(false), 3000);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('mousemove', onMouseMove);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousemove', onMouseMove);
+      clearTimeout(toolbarHideTimer.current);
+    };
+  }, [immersiveMode]);
+
+  useEffect(() => {
+    if (page !== 'learn') setImmersiveMode(false);
+  }, [page]);
+
   function showToast(msg) {
     clearTimeout(toastTimer.current);
     setToast(msg);
@@ -324,16 +516,16 @@ function App() {
       showToast('该篇暂无题目');
       return;
     }
-    startQuiz('doc', moduleId, docIdx, shuffle(questions));
+    startQuiz('doc', moduleId, docIdx, questions);
   }
 
-  function startDrill(moduleId) {
-    const questions = getModuleQuestions(moduleId);
+  function startDrill(moduleId, limit = DEFAULT_DRILL_LIMIT) {
+    const questions = getDrillQuestions(moduleId, drillStatCache, limit);
     if (!questions.length) {
       showToast('该模块暂无题目');
       return;
     }
-    startQuiz('drill', moduleId, null, shuffle(questions));
+    startQuiz('drill', moduleId, null, questions, { limit });
   }
 
   function startWrongBook(moduleId = null) {
@@ -345,24 +537,14 @@ function App() {
       showToast(moduleId ? '该模块暂无错题' : '当前没有错题');
       return;
     }
-    startQuiz('wrongbook', moduleId || 'all', null, shuffle(questions));
+    startQuiz('wrongbook', moduleId || 'all', null, orderQuestionsByType(questions));
   }
 
-  function startQuiz(type, moduleId, docIdx, questions) {
-    navigate(`/quiz/${type}/${moduleId}${docIdx === null || docIdx === undefined ? '' : `/${docIdx}`}`);
+  function startQuiz(type, moduleId, docIdx, questions, options = {}) {
+    const query = type === 'drill' ? `?limit=${options.limit || 'all'}` : '';
+    navigate(`/quiz/${type}/${moduleId}${docIdx === null || docIdx === undefined ? '' : `/${docIdx}`}${query}`);
     setCurrentModuleId(moduleId);
-    setQuizState({
-      type,
-      moduleId,
-      docIdx,
-      questions,
-      pageSize: 5,
-      currentPageIdx: 0,
-      selections: {},
-      answers: {},
-      submittedPages: [],
-      score: 0,
-    });
+    setQuizState(createQuizState(type, moduleId, docIdx, questions));
     setAnswerCardCollapsed(false);
     setMobileAnswerCardOpen(false);
   }
@@ -504,6 +686,15 @@ function App() {
   return (
     <>
       {toast && <div className="toast">{toast}</div>}
+      {immersiveMode && (
+        <div className={`immersive-toolbar${toolbarVisible ? '' : ' hidden'}`}>
+          <span>专注阅读</span>
+          <div className="immersive-toolbar-sep" />
+          <button className="immersive-toolbar-exit" onClick={() => setImmersiveMode(false)}>
+            退出 <kbd>Esc</kbd>
+          </button>
+        </div>
+      )}
       <nav className="nav">
         <div className="nav-logo">⚡ 前端知识库</div>
         <div className="nav-tabs">
@@ -547,6 +738,8 @@ function App() {
               onMarkDone={markDone}
               onStartQuiz={startDocQuiz}
               onGoDrill={() => setRoute('drill')}
+              immersiveMode={immersiveMode}
+              onToggleImmersive={() => setImmersiveMode(v => !v)}
             />
           )}
           {page === 'drill' && <DrillSelect drillStatCache={drillStatCache} onStartDrill={startDrill} />}
@@ -697,12 +890,14 @@ function Sidebar({ currentModuleId, currentDocIdx, progressCache, onNavToDoc }) 
   );
 }
 
-function Article({ module, docIdx, progressCache, onHome, onModuleHome, onNavToDoc, onMarkDone, onStartQuiz, onGoDrill }) {
+function Article({ module, docIdx, progressCache, onHome, onModuleHome, onNavToDoc, onMarkDone, onStartQuiz, onGoDrill, immersiveMode, onToggleImmersive }) {
   const doc = module.docs[docIdx];
   const isDone = progressCache[`${module.id}__${docIdx}`];
   const prev = docIdx > 0 ? module.docs[docIdx - 1] : null;
   const next = docIdx < module.docs.length - 1 ? module.docs[docIdx + 1] : null;
   const html = marked.parse(normalizeMarkdown(doc.content));
+  const meta = doc.docMeta || {};
+  const sourceLabel = sourceTypeLabel(meta.sourceType);
 
   return (
     <div className="article-wrap">
@@ -715,8 +910,26 @@ function Article({ module, docIdx, progressCache, onHome, onModuleHome, onNavToD
           <span className="article-tag accent">{module.name}</span>
           <span className="article-tag">{docIdx + 1} / {module.docs.length}</span>
           {doc.difficulty && <span className={`badge badge-${getDifficultyClass(doc.difficulty)}`}>{doc.difficulty}</span>}
+          {sourceLabel && <span className="article-tag source">{sourceLabel}</span>}
+          {meta.updated && <span className="article-tag">更新 {meta.updated}</span>}
           {isDone && <span className="badge badge-easy">✓ 已读</span>}
+          <button className="immersive-toggle-btn" onClick={onToggleImmersive} title={immersiveMode ? '退出专注模式 (Esc)' : '进入专注阅读模式'}>
+            {immersiveMode ? '⊠ 退出专注' : '⊡ 专注阅读'}
+          </button>
         </div>
+        {(meta.sourceTitle || meta.sourceAuthor || meta.sourceUrl || meta.originalPath) && (
+          <div className="article-source-card">
+            {meta.sourceTitle && <div><span>来源标题</span>{meta.sourceTitle}</div>}
+            {meta.sourceAuthor && <div><span>作者</span>{meta.sourceAuthor}</div>}
+            {meta.sourceUrl && (
+              <div>
+                <span>原文链接</span>
+                <a href={meta.sourceUrl} target="_blank" rel="noopener noreferrer">{meta.sourceUrl}</a>
+              </div>
+            )}
+            {meta.originalPath && <div><span>原始位置</span>{meta.originalPath}</div>}
+          </div>
+        )}
       </div>
       <div className="md-body" dangerouslySetInnerHTML={{ __html: html }} />
 
@@ -759,7 +972,7 @@ function DrillSelect({ drillStatCache, onStartDrill }) {
   return (
     <div className="module-select-page">
       <h2>🎯 模块刷题</h2>
-      <p>不局限于单篇，对整个模块题库进行随机练习</p>
+      <p>默认轻量练习 20 题，先完成一小批，再根据错题和未练题持续循环。</p>
       <div className="module-select-cards">
         {LEARNING_CONTENT.modules.map(m => {
           const total = m.docs.reduce((n, d) => n + (d.quiz ? d.quiz.length : 0), 0);
@@ -769,10 +982,21 @@ function DrillSelect({ drillStatCache, onStartDrill }) {
           const latestCorrect = allQids.filter(id => drillStatCache[id]?.lastCorrect).length;
           const latestPct = done ? Math.round((latestCorrect / done) * 100) : 0;
           return (
-            <div className="module-select-card" key={m.id} onClick={() => onStartDrill(m.id)}>
+            <div className="module-select-card" key={m.id} onClick={() => onStartDrill(m.id, DEFAULT_DRILL_LIMIT)}>
               <div className="icon">{m.icon}</div>
               <div className="name">{m.name}</div>
               <div className="count">{total} 题 · 已练 {done} · 最近正确率 {latestPct}%</div>
+              <div className="module-card-actions">
+                <button className="mini-btn primary" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, DEFAULT_DRILL_LIMIT); }}>
+                  练 {Math.min(DEFAULT_DRILL_LIMIT, total)} 题
+                </button>
+                <button className="mini-btn" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, QUICK_DRILL_LIMIT); }}>
+                  短练 {Math.min(QUICK_DRILL_LIMIT, total)}
+                </button>
+                <button className="mini-btn ghost" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, null); }}>
+                  全量复盘
+                </button>
+              </div>
             </div>
           );
         })}
@@ -1033,24 +1257,22 @@ function AnswerCard({ quizState, collapsed, mobileOpen, onToggle, onJumpToQuesti
       style={{ display: 'flex' }}
     >
       <div className="ac-collapsed-bar" onClick={onToggle}>
-        <span style={{ fontSize: 16 }}>🗒️</span>
         <span className="ac-collapsed-title">答题卡</span>
       </div>
       <div className="ac-inner">
         <div className="ac-header">
-          <span className="ac-header-title">🗒️ 答题卡</span>
+          <div>
+            <div className="ac-header-title">答题卡</div>
+            <div className="ac-progress-text">已处理 {correctCnt + wrongCnt + selectedCnt} / {totalQ}</div>
+          </div>
           <button className="ac-toggle-btn" onClick={onToggle} title="折叠">{collapsed ? '‹' : '›'}</button>
-        </div>
-        <div className="answer-card-legend">
-          <div className="legend-item"><div className="legend-dot unanswered" />未作答</div>
-          <div className="legend-item"><div className="legend-dot selected" />已选未交</div>
-          <div className="legend-item"><div className="legend-dot correct" />答对</div>
-          <div className="legend-item"><div className="legend-dot wrong" />答错</div>
         </div>
         <div className="answer-card-body">
           {groups.map(group => (
-            <div key={group.pageNo}>
-              <div className="answer-card-page-label">第 {group.pageNo} 页{group.isCurrent ? ' （当前）' : ''}</div>
+            <div className="answer-card-page" key={group.pageNo}>
+              <div className={`answer-card-page-label${group.isCurrent ? ' current' : ''}`}>
+                P{group.pageNo}{group.isCurrent ? ' 当前' : ''}
+              </div>
               <div className="answer-card-grid">
                 {group.cells.map(cell => (
                   <div
@@ -1067,9 +1289,9 @@ function AnswerCard({ quizState, collapsed, mobileOpen, onToggle, onJumpToQuesti
           ))}
         </div>
         <div className="answer-card-summary">
-          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--success)' }} />答对 {correctCnt}</div>
-          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--danger)' }} />答错 {wrongCnt}</div>
-          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--accent)' }} />已选未交 {selectedCnt}</div>
+          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--success)' }} />对 {correctCnt}</div>
+          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--danger)' }} />错 {wrongCnt}</div>
+          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--accent)' }} />已选 {selectedCnt}</div>
           <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--border)' }} />未做 {unansweredCnt}</div>
         </div>
       </div>

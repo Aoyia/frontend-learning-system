@@ -1,4 +1,3 @@
-import { TECH_BREAKER_MODULES } from './tech-breaker-content.js';
 import { ENGINEERING_TOOLCHAIN_CONTENT } from './engineering-toolchain-content.js';
 import { PERFORMANCE_DIAGNOSTICS_CONTENT } from './performance-diagnostics-content.js';
 import { FRONTEND_ARCHITECTURE_CONTENT } from './frontend-architecture-content.js';
@@ -23,7 +22,6 @@ export const LONGFORM_MODULES = [
 
 export const LEARNING_CONTENT = {
   modules: [
-    ...TECH_BREAKER_MODULES,
     ...LONGFORM_MODULES,
   ],
 };

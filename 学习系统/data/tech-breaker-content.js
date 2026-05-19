@@ -1,8 +1,12 @@
+import TECH_BREAKER_CANVAS_RAW from '../../技术破冰/技术破冰.canvas?raw';
+
 const CARD_MARKDOWN = import.meta.glob('../../技术破冰/cards/*.md', {
   query: '?raw',
   import: 'default',
   eager: true,
 });
+
+const TECH_BREAKER_CANVAS = JSON.parse(TECH_BREAKER_CANVAS_RAW);
 
 const CARD_GROUPS = [
   {
@@ -61,6 +65,17 @@ const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 function readCard(title) {
   return CARD_MARKDOWN[`../../技术破冰/cards/${title}.md`];
+}
+
+function titleFromCardPath(path) {
+  return path.split('/').pop()?.replace(/\.md$/, '') || '';
+}
+
+function titleFromCanvasFile(file) {
+  if (!file) return '';
+  const normalized = file.replace(/\\/g, '/');
+  const match = normalized.match(/cards\/(.+)\.md$/);
+  return match ? match[1] : titleFromCardPath(normalized);
 }
 
 function parseFrontmatter(markdown) {
@@ -143,3 +158,31 @@ export const TECH_BREAKER_MODULES = CARD_GROUPS.map(group => ({
   desc: group.desc,
   docs: group.cards.map(makeDoc),
 }));
+
+const canvasCardTitles = TECH_BREAKER_CANVAS.nodes
+  .filter(node => node.type === 'file')
+  .map(node => titleFromCanvasFile(node.file))
+  .filter(Boolean);
+
+const cardTitles = Array.from(new Set([
+  ...CARD_GROUPS.flatMap(group => group.cards),
+  ...canvasCardTitles,
+]));
+
+const cardsByTitle = Object.fromEntries(
+  cardTitles.map(title => [title, makeDoc(title)])
+);
+
+const nodeToCard = Object.fromEntries(
+  TECH_BREAKER_CANVAS.nodes
+    .filter(node => node.type === 'file')
+    .map(node => [node.id, titleFromCanvasFile(node.file)])
+    .filter(([, title]) => title && cardsByTitle[title])
+);
+
+export const TECH_BREAKER_CONTENT = {
+  canvas: TECH_BREAKER_CANVAS,
+  cardsByTitle,
+  nodeToCard,
+  nodesById: Object.fromEntries(TECH_BREAKER_CANVAS.nodes.map(node => [node.id, node])),
+};

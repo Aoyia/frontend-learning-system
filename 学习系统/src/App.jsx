@@ -1,269 +1,51 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { marked } from 'marked';
-import hljs from 'highlight.js';
 import { LEARNING_CONTENT } from '../data/learning-content.js';
+import { dbDelete, dbPut } from './storage/learnDb.js';
+import { Home } from './pages/Home.jsx';
+import { TechBreakerMap } from './pages/TechBreakerMap.jsx';
+import { TechBreakerCard } from './pages/TechBreakerCard.jsx';
+import { ModuleSelect } from './pages/ModuleSelect.jsx';
+import { Article } from './pages/Article.jsx';
+import { DrillSelect } from './pages/DrillSelect.jsx';
+import { WrongBookPage } from './pages/WrongBookPage.jsx';
+import { QuizPage } from './pages/QuizPage.jsx';
+import { QuizResult } from './pages/QuizResult.jsx';
+import { Sidebar } from './components/Sidebar.jsx';
+import { AnswerCard } from './components/AnswerCard.jsx';
+import {
+  DEFAULT_DRILL_LIMIT,
+  createQuizState,
+  getDocQuestions,
+  getDrillQuestions,
+  getQuestionByQid,
+  isAnswerCorrect,
+  orderQuestionsByType,
+} from './utils/quiz.js';
+import { getBreakerCard, getBreakerQuestions } from './utils/techBreaker.js';
+import { useImmersiveController } from './hooks/useImmersiveController.js';
+import { useLearningDb } from './hooks/useLearningDb.js';
+import { useMarkdownEnhancements } from './hooks/useMarkdownEnhancements.js';
+import { useThemeController } from './hooks/useThemeController.js';
 
-marked.use({
-  renderer: {
-    link(href, title, text) {
-      const isExternal = href && (href.startsWith('http://') || href.startsWith('https://'));
-      if (isExternal) {
-        const t = title ? ` title="${title}"` : ` title="${href}"`;
-        return `<a href="${href}"${t} target="_blank" rel="noopener noreferrer" class="doc-ref">${text}</a>`;
-      }
-      return `<a href="${href}">${text}</a>`;
-    },
-  },
-});
-
-const DB_NAME = 'learnDB';
-const DB_VER = 2;
-const PAGES = ['home', 'learn', 'drill', 'wrongbook'];
-
-function normalizeMarkdown(content) {
-  return content
-    .replace(/^---\n[\s\S]*?\n---\n?/, '')
-    .replace(/==([\s\S]*?)==/g, '<mark>$1</mark>')
-    .replace(/\[\[([^|\]]+)\|([^\]]+)\]\]/g, '$2')
-    .replace(/\[\[([^\]]+)\]\]/g, '$1');
-}
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = e => {
-      const d = e.target.result;
-      if (!d.objectStoreNames.contains('progress')) d.createObjectStore('progress', { keyPath: 'id' });
-      if (!d.objectStoreNames.contains('quizRecord')) d.createObjectStore('quizRecord', { keyPath: 'id', autoIncrement: true });
-      if (!d.objectStoreNames.contains('drillStat')) d.createObjectStore('drillStat', { keyPath: 'qid' });
-      if (!d.objectStoreNames.contains('wrongBook')) d.createObjectStore('wrongBook', { keyPath: 'qid' });
-    };
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror = e => reject(e.target.error);
-  });
-}
-
-function dbGetAll(db, store) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, 'readonly');
-    const req = tx.objectStore(store).getAll();
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror = e => reject(e.target.error);
-  });
-}
-
-function dbPut(db, store, value) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, 'readwrite');
-    const req = tx.objectStore(store).put(value);
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror = e => reject(e.target.error);
-  });
-}
-
-function dbDelete(db, store, key) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, 'readwrite');
-    const req = tx.objectStore(store).delete(key);
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror = e => reject(e.target.error);
-  });
-}
-
-function isAnswerCorrect(question, selected) {
-  if (Array.isArray(question.answer)) {
-    return Array.isArray(selected)
-      && selected.length === question.answer.length
-      && selected.every(i => question.answer.includes(i));
-  }
-  return question.answer === selected;
-}
-
-function getDifficultyClass(difficulty) {
-  if (difficulty === '入门') return 'easy';
-  if (difficulty === '进阶') return 'medium';
-  return 'hard';
-}
-
-function withQuestionSource(module, doc, docIdx, question, quizIdx) {
-  return {
-    ...question,
-    _qid: `${module.id}__${docIdx}__${quizIdx}`,
-    _moduleId: module.id,
-    _moduleName: module.name,
-    _docIdx: docIdx,
-    _docTitle: doc.title,
-    _quizIdx: quizIdx,
-  };
-}
-
-const QUESTION_TYPE_ORDER = {
-  single: 0,
-  multiple: 1,
-  judgment: 2,
-};
-
-const QUICK_DRILL_LIMIT = 10;
-const DEFAULT_DRILL_LIMIT = 20;
-
-function orderQuestionsByType(questions) {
-  return questions
-    .map((question, originalOrder) => ({ question, originalOrder }))
-    .sort((a, b) => {
-      const typeDiff = (QUESTION_TYPE_ORDER[a.question.type] ?? 99) - (QUESTION_TYPE_ORDER[b.question.type] ?? 99);
-      return typeDiff || a.originalOrder - b.originalOrder;
-    })
-    .map(item => item.question);
-}
-
-function getRawModuleQuestions(moduleId) {
-  const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
-  if (!module) return [];
-  return module.docs.flatMap((doc, docIdx) =>
-    (doc.quiz || []).map((q, qi) => withQuestionSource(module, doc, docIdx, q, qi))
-  );
-}
-
-function getDrillTypeQuotas(limit) {
-  const single = Math.max(1, Math.round(limit * 0.55));
-  const multiple = Math.max(1, Math.round(limit * 0.25));
-  return {
-    single,
-    multiple,
-    judgment: Math.max(1, limit - single - multiple),
-  };
-}
-
-function rankQuestionForDrill(question, drillStatCache) {
-  const stat = drillStatCache[question._qid];
-  if (!stat) return 0;
-  if (!stat.lastCorrect) return 1;
-  return 2;
-}
-
-function selectDrillBatch(questions, drillStatCache, limit = DEFAULT_DRILL_LIMIT) {
-  if (!limit || questions.length <= limit) return orderQuestionsByType(questions);
-
-  const quotas = getDrillTypeQuotas(limit);
-  const selected = [];
-  const selectedIds = new Set();
-  const pickFromType = (type, count) => {
-    questions
-      .filter(question => question.type === type)
-      .map((question, originalOrder) => ({ question, originalOrder }))
-      .sort((a, b) => {
-        const rankDiff = rankQuestionForDrill(a.question, drillStatCache) - rankQuestionForDrill(b.question, drillStatCache);
-        const timeDiff = (drillStatCache[a.question._qid]?.updatedAt || 0) - (drillStatCache[b.question._qid]?.updatedAt || 0);
-        return rankDiff || timeDiff || a.originalOrder - b.originalOrder;
-      })
-      .slice(0, count)
-      .forEach(({ question }) => {
-        selected.push(question);
-        selectedIds.add(question._qid);
-      });
-  };
-
-  pickFromType('single', quotas.single);
-  pickFromType('multiple', quotas.multiple);
-  pickFromType('judgment', quotas.judgment);
-
-  if (selected.length < limit) {
-    questions
-      .filter(question => !selectedIds.has(question._qid))
-      .map((question, originalOrder) => ({ question, originalOrder }))
-      .sort((a, b) => {
-        const rankDiff = rankQuestionForDrill(a.question, drillStatCache) - rankQuestionForDrill(b.question, drillStatCache);
-        const timeDiff = (drillStatCache[a.question._qid]?.updatedAt || 0) - (drillStatCache[b.question._qid]?.updatedAt || 0);
-        return rankDiff || timeDiff || a.originalOrder - b.originalOrder;
-      })
-      .slice(0, limit - selected.length)
-      .forEach(({ question }) => selected.push(question));
-  }
-
-  return orderQuestionsByType(selected);
-}
-
-function getDocQuestions(moduleId, docIdx) {
-  const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
-  const doc = module?.docs[docIdx];
-  if (!module || !doc) return [];
-  return orderQuestionsByType((doc.quiz || []).map((q, qi) => withQuestionSource(module, doc, docIdx, q, qi)));
-}
-
-function getModuleQuestions(moduleId) {
-  return orderQuestionsByType(getRawModuleQuestions(moduleId));
-}
-
-function getDrillQuestions(moduleId, drillStatCache, limit = DEFAULT_DRILL_LIMIT) {
-  const questions = getRawModuleQuestions(moduleId);
-  return selectDrillBatch(questions, drillStatCache, limit);
-}
-
-function getQuestionByQid(qid) {
-  const [moduleId, docIdxText, quizIdxText] = qid.split('__');
-  const docIdx = Number(docIdxText);
-  const quizIdx = Number(quizIdxText);
-  return getDocQuestions(moduleId, docIdx).find(question => question._quizIdx === quizIdx) || null;
-}
-
-function createQuizState(type, moduleId, docIdx, questions) {
-  return {
-    type,
-    moduleId,
-    docIdx,
-    questions,
-    pageSize: 5,
-    currentPageIdx: 0,
-    selections: {},
-    answers: {},
-    submittedPages: [],
-    score: 0,
-  };
-}
-
-function formatAnswer(question, answer) {
-  const toText = idx => {
-    if (idx === undefined || idx === null) return '未选择';
-    if (question.type === 'judgment') return question.options[idx] || '未选择';
-    return `${'ABCDEF'[idx]}. ${question.options[idx] || ''}`;
-  };
-  return Array.isArray(answer) ? answer.map(toText).join('；') : toText(answer);
-}
-
-function sourceTypeLabel(type) {
-  if (type === 'blog') return '博客';
-  if (type === 'note') return '笔记';
-  if (type === 'official') return '官方资料';
-  if (type === 'original') return '原创';
-  return type;
-}
+const PAGES = ['home', 'breaker', 'learn', 'drill', 'wrongbook'];
 
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'dark';
-    const saved = window.localStorage.getItem('learn-theme');
-    if (saved === 'light' || saved === 'dark') return saved;
-    return 'dark';
-  });
-  const [immersiveMode, setImmersiveMode] = useState(false);
-  const [db, setDb] = useState(null);
-  const [progressCache, setProgressCache] = useState({});
-  const [drillStatCache, setDrillStatCache] = useState({});
-  const [wrongBookCache, setWrongBookCache] = useState({});
+  const { theme, toggleTheme } = useThemeController();
+  const { db, progressCache, setProgressCache, drillStatCache, setDrillStatCache, wrongBookCache, setWrongBookCache } = useLearningDb();
   const [page, setPage] = useState('home');
+  const { immersiveMode, setImmersiveMode, toolbarVisible } = useImmersiveController(page);
   const [currentModuleId, setCurrentModuleId] = useState(null);
   const [currentDocIdx, setCurrentDocIdx] = useState(0);
+  const [currentBreakerNodeId, setCurrentBreakerNodeId] = useState(null);
   const [quizState, setQuizState] = useState(null);
   const [answerCardCollapsed, setAnswerCardCollapsed] = useState(false);
   const [mobileAnswerCardOpen, setMobileAnswerCardOpen] = useState(false);
   const [toast, setToast] = useState(null);
-  const [toolbarVisible, setToolbarVisible] = useState(true);
   const toastTimer = useRef(null);
-  const toolbarHideTimer = useRef(null);
   const contentRef = useRef(null);
 
   const currentModule = useMemo(
@@ -277,6 +59,18 @@ function App() {
       setPage('home');
       setQuizState(null);
       setMobileAnswerCardOpen(false);
+      return;
+    }
+    if (parts[0] === 'breaker') {
+      setPage('breaker');
+      setQuizState(null);
+      setMobileAnswerCardOpen(false);
+      const nodeId = parts[1] === 'card' ? parts[2] : null;
+      if (nodeId && !getBreakerCard(nodeId)) {
+        navigate('/breaker', { replace: true });
+        return;
+      }
+      setCurrentBreakerNodeId(nodeId || null);
       return;
     }
     if (parts[0] === 'learn') {
@@ -344,6 +138,13 @@ function App() {
         return;
       }
       questions = getDocQuestions(moduleId, docIdx);
+    } else if (type === 'breaker') {
+      fallback = `/breaker/card/${moduleId}`;
+      if (!getBreakerCard(moduleId)) {
+        navigate('/breaker', { replace: true });
+        return;
+      }
+      questions = getBreakerQuestions(moduleId);
     } else if (type === 'drill') {
       fallback = '/drill';
       if (!module) {
@@ -384,107 +185,17 @@ function App() {
   }, [navigate, page, quizState]);
 
   useEffect(() => {
-    let alive = true;
-    openDB().then(async database => {
-      if (!alive) return;
-      const progress = await dbGetAll(database, 'progress');
-      const stats = await dbGetAll(database, 'drillStat');
-      const wrongBook = await dbGetAll(database, 'wrongBook');
-      if (!alive) return;
-      setDb(database);
-      setProgressCache(Object.fromEntries(progress.map(r => [r.id, r.done])));
-      setDrillStatCache(Object.fromEntries(stats.map(r => [r.qid, r])));
-      setWrongBookCache(Object.fromEntries(wrongBook.map(r => [r.qid, r])));
-    });
-    return () => { alive = false; };
-  }, []);
-
-  useEffect(() => {
     contentRef.current?.scrollTo(0, 0);
   }, [location.pathname]);
 
-  useEffect(() => {
-    document.querySelectorAll('pre code:not(.language-mermaid)').forEach(el => hljs.highlightElement(el));
-
-    let cancelled = false;
-
-    (async () => {
-      const hasMermaidCode = document.querySelector('.md-body pre code.language-mermaid')
-        || document.querySelector('.md-body .mermaid');
-      if (!hasMermaidCode) return;
-
-      const { default: mermaid } = await import('mermaid');
-      if (cancelled) return;
-
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: 'loose',
-        theme: theme === 'light' ? 'default' : 'dark',
-      });
-
-      document.querySelectorAll('.md-body').forEach(body => {
-        body.querySelectorAll('pre code.language-mermaid').forEach(codeEl => {
-          const source = codeEl.textContent || '';
-          const wrapper = document.createElement('div');
-          wrapper.className = 'mermaid';
-          wrapper.setAttribute('data-mermaid-source', source);
-          wrapper.textContent = source;
-          const pre = codeEl.closest('pre');
-          if (pre) pre.replaceWith(wrapper);
-        });
-
-        body.querySelectorAll('.mermaid[data-mermaid-source]').forEach(el => {
-          const source = el.getAttribute('data-mermaid-source') || '';
-          el.textContent = source;
-          el.removeAttribute('data-processed');
-        });
-      });
-
-      const nodes = Array.from(document.querySelectorAll('.md-body .mermaid'));
-      if (nodes.length) {
-        mermaid.run({ nodes }).catch(() => {
-          // Mermaid 语法错误时保留原始文本，避免页面崩溃。
-        });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [page, currentModuleId, currentDocIdx, quizState?.currentPageIdx, quizState?.submittedPages, theme]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    window.localStorage.setItem('learn-theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    document.documentElement.dataset.immersive = immersiveMode ? 'true' : '';
-    if (!immersiveMode) {
-      clearTimeout(toolbarHideTimer.current);
-      setToolbarVisible(true);
-      return;
-    }
-    setToolbarVisible(true);
-    toolbarHideTimer.current = setTimeout(() => setToolbarVisible(false), 3000);
-    const onKey = (e) => { if (e.key === 'Escape') setImmersiveMode(false); };
-    const onMouseMove = () => {
-      setToolbarVisible(true);
-      clearTimeout(toolbarHideTimer.current);
-      toolbarHideTimer.current = setTimeout(() => setToolbarVisible(false), 3000);
-    };
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('mousemove', onMouseMove);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('mousemove', onMouseMove);
-      clearTimeout(toolbarHideTimer.current);
-    };
-  }, [immersiveMode]);
-
-  useEffect(() => {
-    if (page !== 'learn') setImmersiveMode(false);
-  }, [page]);
+  useMarkdownEnhancements({
+    page,
+    currentModuleId,
+    currentDocIdx,
+    quizPageIdx: quizState?.currentPageIdx,
+    submittedPages: quizState?.submittedPages,
+    theme,
+  });
 
   function showToast(msg) {
     clearTimeout(toastTimer.current);
@@ -494,6 +205,7 @@ function App() {
 
   function setRoute(nextPage, opts = {}) {
     if (nextPage === 'home') navigate('/');
+    if (nextPage === 'breaker') navigate(opts.nodeId ? `/breaker/card/${opts.nodeId}` : '/breaker');
     if (nextPage === 'learn') navigate(opts.moduleId ? `/learn/${opts.moduleId}/${opts.docIdx ?? 0}` : '/learn');
     if (nextPage === 'drill') navigate('/drill');
     if (nextPage === 'wrongbook') navigate('/wrongbook');
@@ -517,6 +229,15 @@ function App() {
       return;
     }
     startQuiz('doc', moduleId, docIdx, questions);
+  }
+
+  function startBreakerQuiz(nodeId) {
+    const questions = getBreakerQuestions(nodeId);
+    if (!questions.length) {
+      showToast('这张技术破冰卡片暂无自测题');
+      return;
+    }
+    startQuiz('breaker', nodeId, null, questions);
   }
 
   function startDrill(moduleId, limit = DEFAULT_DRILL_LIMIT) {
@@ -626,7 +347,7 @@ function App() {
       const q = questions[gi];
       const selected = selections[gi];
       if (type === 'drill') saveDrillStat(q, selected);
-      updateWrongBook(q, selected);
+      if (type !== 'breaker') updateWrongBook(q, selected);
     }
     setQuizState(prev => {
       const answers = { ...prev.answers };
@@ -680,7 +401,7 @@ function App() {
   }
 
   const activeNavPage = page === 'quiz' || page === 'result'
-    ? (quizState?.type === 'wrongbook' ? 'wrongbook' : quizState?.type === 'drill' ? 'drill' : 'learn')
+    ? (quizState?.type === 'wrongbook' ? 'wrongbook' : quizState?.type === 'drill' ? 'drill' : quizState?.type === 'breaker' ? 'breaker' : 'learn')
     : page;
 
   return (
@@ -700,14 +421,14 @@ function App() {
         <div className="nav-tabs">
           {PAGES.map(name => (
             <button key={name} className={`nav-tab ${activeNavPage === name ? 'active' : ''}`} onClick={() => setRoute(name)}>
-              {name === 'home' ? '首页' : name === 'learn' ? '📖 学习' : name === 'drill' ? '🎯 刷题' : '🧩 错题本'}
+              {name === 'home' ? '首页' : name === 'breaker' ? '🗺️ 破冰' : name === 'learn' ? '📖 学习' : name === 'drill' ? '🎯 刷题' : '🧩 错题本'}
             </button>
           ))}
         </div>
         <div className="nav-actions">
           <button
             className="theme-toggle-btn"
-            onClick={() => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))}
+            onClick={toggleTheme}
             title="切换白天/夜间模式"
           >
             {theme === 'dark' ? '☀️' : '🌙'}
@@ -724,8 +445,27 @@ function App() {
             onNavToDoc={navToDoc}
           />
         )}
-        <main className="content" ref={contentRef}>
-          {page === 'home' && <Home progressCache={progressCache} onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })} />}
+        <main className={`content ${page === 'breaker' && !currentBreakerNodeId ? 'content-map' : ''}`} ref={contentRef}>
+          {page === 'home' && (
+            <Home
+              progressCache={progressCache}
+              onOpenBreaker={() => setRoute('breaker')}
+              onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })}
+            />
+          )}
+          {page === 'breaker' && !currentBreakerNodeId && (
+            <TechBreakerMap
+              onOpenCard={(nodeId) => setRoute('breaker', { nodeId })}
+            />
+          )}
+          {page === 'breaker' && currentBreakerNodeId && (
+            <TechBreakerCard
+              nodeId={currentBreakerNodeId}
+              onBack={() => setRoute('breaker')}
+              onHome={() => setRoute('home')}
+              onStartQuiz={startBreakerQuiz}
+            />
+          )}
           {page === 'learn' && !currentModule && <ModuleSelect progressCache={progressCache} onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })} />}
           {page === 'learn' && currentModule && (
             <Article
@@ -770,6 +510,8 @@ function App() {
               onStartDrill={startDrill}
               onBackWrongBook={() => setRoute('wrongbook')}
               onStartWrongBook={startWrongBook}
+              onBackBreaker={() => setRoute('breaker', { nodeId: quizState.moduleId })}
+              onStartBreakerQuiz={startBreakerQuiz}
             />
           )}
         </main>
@@ -790,513 +532,5 @@ function App() {
   );
 }
 
-function Home({ progressCache, onOpenModule }) {
-  return (
-    <div className="home">
-      <div className="home-hero">
-        <h1>🚀 前端工程知识学习系统</h1>
-        <p>系统性学习 CI/CD、DevOps、Jenkins 等核心知识，学完即测，模块刷题</p>
-      </div>
-      <div className="module-cards">
-        {LEARNING_CONTENT.modules.map(m => {
-          const total = m.docs.length;
-          const done = m.docs.filter((_, i) => progressCache[`${m.id}__${i}`]).length;
-          const pct = total ? Math.round((done / total) * 100) : 0;
-          return (
-            <div className="module-card" key={m.id} onClick={() => onOpenModule(m.id)}>
-              <div className="module-card-icon">{m.icon}</div>
-              <div className="module-card-title">{m.name}</div>
-              <div className="module-card-desc">{m.desc}</div>
-              <div className="module-card-progress">
-                <div className="progress-bar"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
-                <div className="progress-text">{done}/{total}</div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ModuleSelect({ progressCache, onOpenModule }) {
-  return (
-    <div className="module-select-page">
-      <h2>选择学习模块</h2>
-      <p>每个模块包含多篇连续性文档，学完每篇后有随堂作业</p>
-      <div className="module-select-cards">
-        {LEARNING_CONTENT.modules.map(m => {
-          const total = m.docs.length;
-          const done = m.docs.filter((_, i) => progressCache[`${m.id}__${i}`]).length;
-          return (
-            <div className="module-select-card" key={m.id} onClick={() => onOpenModule(m.id)}>
-              <div className="icon">{m.icon}</div>
-              <div className="name">{m.name}</div>
-              <div className="count">{total} 篇 · {done} 已读</div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function Sidebar({ currentModuleId, currentDocIdx, progressCache, onNavToDoc }) {
-  const [openModules, setOpenModules] = useState(() => new Set([currentModuleId]));
-
-  useEffect(() => {
-    setOpenModules(prev => new Set([...prev, currentModuleId]));
-  }, [currentModuleId]);
-
-  return (
-    <aside className="sidebar">
-      {LEARNING_CONTENT.modules.map(m => {
-        const isOpen = openModules.has(m.id);
-        return (
-          <div className="sidebar-module" key={m.id}>
-            <div
-              className={`sidebar-module-header ${isOpen ? 'open' : ''}`}
-              onClick={() => setOpenModules(prev => {
-                const next = new Set(prev);
-                if (next.has(m.id)) next.delete(m.id);
-                else next.add(m.id);
-                return next;
-              })}
-            >
-              <span>{m.icon}</span> {m.name}
-              <span className="chevron">▶</span>
-            </div>
-            <div className={`sidebar-module-list ${isOpen ? 'open' : ''}`}>
-              {m.docs.map((doc, i) => {
-                const done = progressCache[`${m.id}__${i}`];
-                const active = m.id === currentModuleId && i === currentDocIdx;
-                return (
-                  <div
-                    key={doc.title}
-                    className={`sidebar-item ${done ? 'done' : ''} ${active ? 'active' : ''}`}
-                    onClick={() => onNavToDoc(m.id, i)}
-                  >
-                    <span className="dot" />
-                    <span>{doc.title}</span>
-                    <span className="item-idx">{i + 1}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </aside>
-  );
-}
-
-function Article({ module, docIdx, progressCache, onHome, onModuleHome, onNavToDoc, onMarkDone, onStartQuiz, onGoDrill, immersiveMode, onToggleImmersive }) {
-  const doc = module.docs[docIdx];
-  const isDone = progressCache[`${module.id}__${docIdx}`];
-  const prev = docIdx > 0 ? module.docs[docIdx - 1] : null;
-  const next = docIdx < module.docs.length - 1 ? module.docs[docIdx + 1] : null;
-  const html = marked.parse(normalizeMarkdown(doc.content));
-  const meta = doc.docMeta || {};
-  const sourceLabel = sourceTypeLabel(meta.sourceType);
-
-  return (
-    <div className="article-wrap">
-      <div className="article-header">
-        <div className="article-breadcrumb">
-          <span onClick={onHome}>首页</span> / <span onClick={onModuleHome}>{module.name}</span> / {doc.title}
-        </div>
-        <div className="article-title">{doc.title}</div>
-        <div className="article-meta">
-          <span className="article-tag accent">{module.name}</span>
-          <span className="article-tag">{docIdx + 1} / {module.docs.length}</span>
-          {doc.difficulty && <span className={`badge badge-${getDifficultyClass(doc.difficulty)}`}>{doc.difficulty}</span>}
-          {sourceLabel && <span className="article-tag source">{sourceLabel}</span>}
-          {meta.updated && <span className="article-tag">更新 {meta.updated}</span>}
-          {isDone && <span className="badge badge-easy">✓ 已读</span>}
-          <button className="immersive-toggle-btn" onClick={onToggleImmersive} title={immersiveMode ? '退出专注模式 (Esc)' : '进入专注阅读模式'}>
-            {immersiveMode ? '⊠ 退出专注' : '⊡ 专注阅读'}
-          </button>
-        </div>
-        {(meta.sourceTitle || meta.sourceAuthor || meta.sourceUrl || meta.originalPath) && (
-          <div className="article-source-card">
-            {meta.sourceTitle && <div><span>来源标题</span>{meta.sourceTitle}</div>}
-            {meta.sourceAuthor && <div><span>作者</span>{meta.sourceAuthor}</div>}
-            {meta.sourceUrl && (
-              <div>
-                <span>原文链接</span>
-                <a href={meta.sourceUrl} target="_blank" rel="noopener noreferrer">{meta.sourceUrl}</a>
-              </div>
-            )}
-            {meta.originalPath && <div><span>原始位置</span>{meta.originalPath}</div>}
-          </div>
-        )}
-      </div>
-      <div className="md-body" dangerouslySetInnerHTML={{ __html: html }} />
-
-      {!isDone && (
-        <div className="done-banner">
-          <div className="done-banner-text">📖 读完了吗？标记为已读，并做随堂作业</div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn btn-outline" onClick={() => onMarkDone(module.id, docIdx, false)}>仅标记已读</button>
-            <button className="btn btn-primary" onClick={() => onMarkDone(module.id, docIdx, true)}>已读 + 开始作业</button>
-          </div>
-        </div>
-      )}
-
-      {isDone && (
-        <div style={{ marginTop: 24, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={() => onStartQuiz(module.id, docIdx)}>做随堂作业</button>
-          <button className="btn btn-outline" onClick={onGoDrill}>去模块刷题</button>
-        </div>
-      )}
-
-      <div className="article-nav">
-        {prev ? (
-          <button className="article-nav-btn" onClick={() => onNavToDoc(module.id, docIdx - 1)}>
-            <div className="label">← 上一篇</div>
-            <div className="title">{prev.title}</div>
-          </button>
-        ) : <div />}
-        {next ? (
-          <button className="article-nav-btn right" onClick={() => onNavToDoc(module.id, docIdx + 1)}>
-            <div className="label">下一篇 →</div>
-            <div className="title">{next.title}</div>
-          </button>
-        ) : <div />}
-      </div>
-    </div>
-  );
-}
-
-function DrillSelect({ drillStatCache, onStartDrill }) {
-  return (
-    <div className="module-select-page">
-      <h2>🎯 模块刷题</h2>
-      <p>默认轻量练习 20 题，先完成一小批，再根据错题和未练题持续循环。</p>
-      <div className="module-select-cards">
-        {LEARNING_CONTENT.modules.map(m => {
-          const total = m.docs.reduce((n, d) => n + (d.quiz ? d.quiz.length : 0), 0);
-          const allQids = [];
-          m.docs.forEach((d, di) => (d.quiz || []).forEach((_, qi) => allQids.push(`${m.id}__${di}__${qi}`)));
-          const done = allQids.filter(id => drillStatCache[id]).length;
-          const latestCorrect = allQids.filter(id => drillStatCache[id]?.lastCorrect).length;
-          const latestPct = done ? Math.round((latestCorrect / done) * 100) : 0;
-          return (
-            <div className="module-select-card" key={m.id} onClick={() => onStartDrill(m.id, DEFAULT_DRILL_LIMIT)}>
-              <div className="icon">{m.icon}</div>
-              <div className="name">{m.name}</div>
-              <div className="count">{total} 题 · 已练 {done} · 最近正确率 {latestPct}%</div>
-              <div className="module-card-actions">
-                <button className="mini-btn primary" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, DEFAULT_DRILL_LIMIT); }}>
-                  练 {Math.min(DEFAULT_DRILL_LIMIT, total)} 题
-                </button>
-                <button className="mini-btn" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, QUICK_DRILL_LIMIT); }}>
-                  短练 {Math.min(QUICK_DRILL_LIMIT, total)}
-                </button>
-                <button className="mini-btn ghost" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, null); }}>
-                  全量复盘
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function WrongBookPage({ wrongBookCache, onStartWrongBook, onReadChapter }) {
-  const records = Object.values(wrongBookCache).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  const total = records.length;
-  const moduleStats = LEARNING_CONTENT.modules.map(module => ({
-    module,
-    count: records.filter(record => record.moduleId === module.id).length,
-  }));
-
-  if (!total) {
-    return (
-      <div className="module-select-page">
-        <h2>🧩 错题本</h2>
-        <p>错题会在作业和刷题提交后自动收集，答对后自动移出错题本。</p>
-        <div className="empty-state">
-          <div className="icon">✓</div>
-          <p>当前没有错题。可以先去学习或刷题，系统会自动记录需要复习的题目。</p>
-          <div style={{ marginTop: 20 }}>
-            <button className="btn btn-primary" onClick={() => onStartWrongBook()}>开始错题练习</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="module-select-page">
-      <h2>🧩 错题本</h2>
-      <p>当前共 {total} 道错题。优先练错题，答对后自动移出错题本，再回推荐章节补知识点。</p>
-      <div className="module-select-cards">
-        <div className="module-select-card" onClick={() => onStartWrongBook()}>
-          <div className="icon">🔥</div>
-          <div className="name">全部错题</div>
-          <div className="count">{total} 题 · 综合复盘</div>
-        </div>
-        {moduleStats.filter(item => item.count > 0).map(({ module, count }) => (
-          <div className="module-select-card" key={module.id} onClick={() => onStartWrongBook(module.id)}>
-            <div className="icon">{module.icon}</div>
-            <div className="name">{module.name}</div>
-            <div className="count">{count} 题 · 针对练习</div>
-          </div>
-        ))}
-      </div>
-      <div className="wrongbook-list">
-        {records.slice(0, 12).map(record => (
-          <div className="wrongbook-item" key={record.qid}>
-            <div className="wrongbook-item-main">
-              <div className="wrongbook-item-title">{record.question}</div>
-              <div className="wrongbook-item-meta">
-                {record.moduleName} / {record.docTitle} · 错 {record.wrongCount || 1} 次
-              </div>
-            </div>
-            <button className="btn btn-outline" onClick={() => onReadChapter(record.moduleId, record.docIdx)}>复习章节</button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function QuizPage({ quizState, onToggleOption, onSubmitPage, onNextPage, onShowResult, onReadChapter }) {
-  const totalQ = quizState.questions.length;
-  const totalPages = Math.ceil(totalQ / quizState.pageSize);
-  const start = quizState.currentPageIdx * quizState.pageSize;
-  const end = Math.min(start + quizState.pageSize, totalQ);
-  const questions = quizState.questions.slice(start, end);
-  const isSubmitted = quizState.submittedPages.includes(quizState.currentPageIdx);
-  const isLastPage = quizState.currentPageIdx === totalPages - 1;
-  const progress = ((quizState.currentPageIdx + (isSubmitted ? 1 : 0)) / totalPages * 100).toFixed(0);
-  const unansweredCount = isSubmitted ? 0 : questions.filter((_, li) => quizState.selections[start + li] === undefined).length;
-  const allSelected = isSubmitted || unansweredCount === 0;
-
-  return (
-    <div className="quiz-wrap">
-      <div className="quiz-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <h2>{quizState.type === 'doc' ? '📝 随堂作业' : quizState.type === 'wrongbook' ? '🧩 错题练习' : '🎯 模块刷题'}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 13, color: 'var(--text2)' }}>第 {quizState.currentPageIdx + 1} / {totalPages} 页 · 共 {totalQ} 题</span>
-          </div>
-        </div>
-        <div className="quiz-progress-bar">
-          <div className="progress-fill" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
-
-      {questions.map((q, li) => (
-        <QuestionBlock
-          key={start + li}
-          question={q}
-          globalIdx={start + li}
-          isSubmitted={isSubmitted}
-          selected={quizState.selections[start + li]}
-          answered={quizState.answers[start + li]}
-          onToggleOption={onToggleOption}
-          onReadChapter={onReadChapter}
-        />
-      ))}
-
-      <div className="quiz-actions">
-        {!isSubmitted && (
-          <button
-            className="btn btn-primary"
-            disabled={!allSelected}
-            onClick={onSubmitPage}
-          >
-            {allSelected ? '提交答案' : `还需回答 ${unansweredCount} 题`}
-          </button>
-        )}
-        {isSubmitted && !isLastPage && <button className="btn btn-primary" onClick={onNextPage}>下一页 →</button>}
-        {isSubmitted && isLastPage && <button className="btn btn-primary" onClick={onShowResult}>查看最终结果</button>}
-      </div>
-    </div>
-  );
-}
-
-function QuestionBlock({ question, globalIdx, isSubmitted, selected, answered, onToggleOption, onReadChapter }) {
-  const typeLabel = question.type === 'single' ? '单选' : question.type === 'multiple' ? '多选' : '判断';
-
-  return (
-    <div className="quiz-question" id={`qq-${globalIdx}`}>
-      <div className="quiz-question-num">第 {globalIdx + 1} 题 · {typeLabel}</div>
-      <div className="quiz-question-text">{question.question}</div>
-      <div className="quiz-options">
-        {question.options.map((opt, i) => {
-          const keyLabel = question.type === 'judgment' ? (i === 0 ? '✓' : '✗') : 'ABCDEF'[i];
-          let cls = '';
-          if (isSubmitted) {
-            const isCorrect = Array.isArray(question.answer) ? question.answer.includes(i) : question.answer === i;
-            const isSelected = Array.isArray(answered) ? answered.includes(i) : answered === i;
-            cls = isCorrect ? 'correct disabled' : (isSelected ? 'wrong disabled' : 'disabled');
-          } else {
-            const isSel = Array.isArray(selected) ? selected.includes(i) : selected === i;
-            cls = isSel && selected !== undefined ? 'selected' : '';
-          }
-          return (
-            <div key={opt} className={`quiz-option ${cls}`} onClick={isSubmitted ? undefined : () => onToggleOption(globalIdx, i)}>
-              <span className="opt-key">{keyLabel}</span>
-              <span>{opt}</span>
-            </div>
-          );
-        })}
-      </div>
-      {isSubmitted && (
-        <div className="quiz-explain show">
-          <div><strong>正确答案：</strong>{formatAnswer(question, question.answer)}</div>
-          {answered !== undefined && !isAnswerCorrect(question, answered) && (
-            <div><strong>你的答案：</strong>{formatAnswer(question, answered)}</div>
-          )}
-          {question.explain && <div className="quiz-explain-text">💡 {question.explain}</div>}
-          {question._moduleId && (
-            <div className="recommended-reading">
-              <span>推荐阅读：</span>
-              <button className="reading-link" onClick={() => onReadChapter(question._moduleId, question._docIdx)}>
-                {question._moduleName} / {question._docTitle}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function QuizResult({ quizState, onStartDocQuiz, onNextDoc, onBackModule, onBackDrill, onStartDrill, onBackWrongBook, onStartWrongBook }) {
-  const total = quizState.questions.length;
-  const pct = Math.round((quizState.score / total) * 100);
-  const emoji = pct >= 90 ? '🎉' : pct >= 70 ? '👍' : pct >= 50 ? '🤔' : '😅';
-  const msg = pct >= 90 ? '优秀！掌握得非常扎实' : pct >= 70 ? '不错！继续加油' : pct >= 50 ? '还需要再复习一下' : '建议重新阅读本篇内容';
-  const moduleDocLen = quizState.type === 'doc' ? LEARNING_CONTENT.modules.find(x => x.id === quizState.moduleId).docs.length : 0;
-  const hasNextDoc = quizState.type === 'doc' ? quizState.docIdx + 1 < moduleDocLen : false;
-
-  return (
-    <div className="quiz-wrap">
-      <div className="quiz-result">
-        <div className="score-circle">
-          <div className="score-num">{pct}%</div>
-          <div className="score-label">{quizState.score}/{total}</div>
-        </div>
-        <h3>{emoji} {msg}</h3>
-        <p>共 {total} 题，答对 {quizState.score} 题</p>
-        <div className="actions">
-          {quizState.type === 'doc' ? (
-            <>
-              <button className="btn btn-outline" onClick={() => onStartDocQuiz(quizState.moduleId, quizState.docIdx)}>再做一次</button>
-              <button
-                className="btn btn-primary"
-                onClick={() => hasNextDoc ? onNextDoc(quizState.moduleId, quizState.docIdx + 1) : onBackModule()}
-              >
-                {hasNextDoc ? '下一篇' : '返回模块'}
-              </button>
-            </>
-          ) : quizState.type === 'wrongbook' ? (
-            <>
-              <button className="btn btn-outline" onClick={onBackWrongBook}>返回错题本</button>
-              <button className="btn btn-primary" onClick={() => onStartWrongBook(quizState.moduleId === 'all' ? null : quizState.moduleId)}>继续练错题</button>
-            </>
-          ) : (
-            <>
-              <button className="btn btn-outline" onClick={onBackDrill}>换模块</button>
-              <button className="btn btn-primary" onClick={() => onStartDrill(quizState.moduleId)}>再刷一组</button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AnswerCard({ quizState, collapsed, mobileOpen, onToggle, onJumpToQuestion }) {
-  const totalQ = quizState.questions.length;
-  const totalPages = Math.ceil(totalQ / quizState.pageSize);
-  let correctCnt = 0;
-  let wrongCnt = 0;
-  let selectedCnt = 0;
-  let unansweredCnt = 0;
-  const groups = [];
-
-  for (let p = 0; p < totalPages; p++) {
-    const pageStart = p * quizState.pageSize;
-    const pageEnd = Math.min(pageStart + quizState.pageSize, totalQ);
-    const isSubmittedPage = quizState.submittedPages.includes(p);
-    const cells = [];
-    for (let gi = pageStart; gi < pageEnd; gi++) {
-      const q = quizState.questions[gi];
-      let cls;
-      let title;
-      if (isSubmittedPage) {
-        const ok = isAnswerCorrect(q, quizState.answers[gi]);
-        cls = ok ? 'correct' : 'wrong';
-        title = ok ? '答对' : '答错';
-        if (ok) correctCnt++;
-        else wrongCnt++;
-      } else if (quizState.selections[gi] !== undefined) {
-        cls = 'selected-unsub';
-        title = '已选未提交';
-        selectedCnt++;
-      } else {
-        cls = 'unanswered';
-        title = '未作答';
-        unansweredCnt++;
-      }
-      cells.push({ gi, cls, title });
-    }
-    groups.push({ pageNo: p + 1, isCurrent: p === quizState.currentPageIdx, cells });
-  }
-
-  return (
-    <aside
-      className={`answer-card-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'open' : ''}`}
-      style={{ display: 'flex' }}
-    >
-      <div className="ac-collapsed-bar" onClick={onToggle}>
-        <span className="ac-collapsed-title">答题卡</span>
-      </div>
-      <div className="ac-inner">
-        <div className="ac-header">
-          <div>
-            <div className="ac-header-title">答题卡</div>
-            <div className="ac-progress-text">已处理 {correctCnt + wrongCnt + selectedCnt} / {totalQ}</div>
-          </div>
-          <button className="ac-toggle-btn" onClick={onToggle} title="折叠">{collapsed ? '‹' : '›'}</button>
-        </div>
-        <div className="answer-card-body">
-          {groups.map(group => (
-            <div className="answer-card-page" key={group.pageNo}>
-              <div className={`answer-card-page-label${group.isCurrent ? ' current' : ''}`}>
-                P{group.pageNo}{group.isCurrent ? ' 当前' : ''}
-              </div>
-              <div className="answer-card-grid">
-                {group.cells.map(cell => (
-                  <div
-                    key={cell.gi}
-                    className={`ac-cell ${cell.cls}${group.isCurrent ? ' is-current-page' : ''}`}
-                    title={`第 ${cell.gi + 1} 题 · ${cell.title}`}
-                    onClick={() => onJumpToQuestion(cell.gi)}
-                  >
-                    {cell.gi + 1}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="answer-card-summary">
-          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--success)' }} />对 {correctCnt}</div>
-          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--danger)' }} />错 {wrongCnt}</div>
-          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--accent)' }} />已选 {selectedCnt}</div>
-          <div className="ac-sum-item"><div className="ac-sum-dot" style={{ background: 'var(--border)' }} />未做 {unansweredCnt}</div>
-        </div>
-      </div>
-    </aside>
-  );
-}
 
 export default App;

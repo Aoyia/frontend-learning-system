@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="data:," />
   <title>前端知识学习系统</title>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var redirect = params.get('redirect');
+      if (!redirect) return;
+      var base = window.location.pathname.replace(/\/$/, '');
+      if (base !== '/frontend-learning-system') base = '';
+      window.history.replaceState(null, '', base + redirect);
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

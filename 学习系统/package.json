@@ -2,7 +2,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\"",
+    "build": "vite build && node scripts/create-pages-404.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

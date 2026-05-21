@@ -1,5 +1,5 @@
 const DB_NAME = 'learnDB';
-const DB_VER = 2;
+const DB_VER = 3;
 
 export function openDB() {
   return new Promise((resolve, reject) => {
@@ -10,6 +10,8 @@ export function openDB() {
       if (!d.objectStoreNames.contains('quizRecord')) d.createObjectStore('quizRecord', { keyPath: 'id', autoIncrement: true });
       if (!d.objectStoreNames.contains('drillStat')) d.createObjectStore('drillStat', { keyPath: 'qid' });
       if (!d.objectStoreNames.contains('wrongBook')) d.createObjectStore('wrongBook', { keyPath: 'qid' });
+      if (!d.objectStoreNames.contains('petState')) d.createObjectStore('petState', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('petEvents')) d.createObjectStore('petEvents', { keyPath: 'id' });
     };
     req.onsuccess = e => resolve(e.target.result);
     req.onerror = e => reject(e.target.error);

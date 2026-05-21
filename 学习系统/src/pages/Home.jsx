@@ -1,6 +1,7 @@
 import { LEARNING_CONTENT } from '../../data/learning-content.js';
+import { PetHomeCard } from '../components/PetHomeCard.jsx';
 
-export function Home({ progressCache, onOpenBreaker, onOpenModule }) {
+export function Home({ progressCache, petState, onOpenPet, onOpenRoadmap, onOpenBreaker, onOpenModule }) {
   return (
     <div className="home">
       <div className="home-hero">
@@ -8,7 +9,12 @@ export function Home({ progressCache, onOpenBreaker, onOpenModule }) {
         <p>先用技术破冰建立知识地图，再进入专题学习、作业、自测和错题复盘。</p>
       </div>
       <div className="home-entry-grid">
-        <button className="home-entry-card primary" onClick={onOpenBreaker}>
+        <button className="home-entry-card primary" onClick={onOpenRoadmap}>
+          <span className="home-entry-icon">🧭</span>
+          <span className="home-entry-title">中高级学习路线</span>
+          <span className="home-entry-desc">按腾讯中高级前端能力模型，校准学习进度、错题和项目追问。</span>
+        </button>
+        <button className="home-entry-card" onClick={onOpenBreaker}>
           <span className="home-entry-icon">🗺️</span>
           <span className="home-entry-title">技术破冰地图</span>
           <span className="home-entry-desc">按 Obsidian Canvas 浏览知识图谱，从节点进入破冰卡片。</span>
@@ -19,6 +25,7 @@ export function Home({ progressCache, onOpenBreaker, onOpenModule }) {
           <span className="home-entry-desc">进入深度长文、博客文档、作业和模块刷题。</span>
         </button>
       </div>
+      <PetHomeCard petState={petState} onOpen={onOpenPet} />
       <div className="module-cards">
         {LEARNING_CONTENT.modules.map(m => {
           const total = m.docs.length;

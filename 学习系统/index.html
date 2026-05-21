@@ -293,7 +293,7 @@
 
     .home-entry-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
       margin: 4px 0 30px;
     }
@@ -322,6 +322,556 @@
     .home-entry-icon { font-size: 26px; }
     .home-entry-title { font-size: 17px; font-weight: 700; }
     .home-entry-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+    /* ========== PET SYSTEM ========== */
+    .pet-widget {
+      height: 38px;
+      min-width: 138px;
+      padding: 3px 9px 3px 4px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(78,205,196,.14), rgba(237,137,54,.1)), var(--surface2);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      margin-right: 8px;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+    }
+    .pet-widget:hover {
+      border-color: var(--accent2);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(78,205,196,.14);
+    }
+    .pet-widget-avatar {
+      width: 30px;
+      height: 30px;
+      object-fit: contain;
+      flex: 0 0 auto;
+    }
+    .pet-widget-info {
+      display: grid;
+      gap: 4px;
+      min-width: 82px;
+    }
+    .pet-widget-name {
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .pet-widget-progress,
+    .pet-large-progress {
+      height: 5px;
+      border-radius: 99px;
+      background: rgba(136,146,170,.24);
+      overflow: hidden;
+    }
+    .pet-widget-progress span,
+    .pet-large-progress span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent2), var(--warning));
+      transition: width .35s ease;
+    }
+    .pet-home-card {
+      border: 1px solid rgba(78,205,196,.35);
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at 16% 20%, rgba(78,205,196,.16), transparent 34%),
+        radial-gradient(circle at 84% 18%, rgba(237,137,54,.14), transparent 28%),
+        var(--surface);
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      align-items: center;
+      gap: 18px;
+      padding: 18px 20px;
+      margin: 0 0 30px;
+    }
+    .pet-home-visual {
+      width: 160px;
+      height: 160px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: rgba(78,205,196,.08);
+      border: 1px solid rgba(78,205,196,.2);
+    }
+    .pet-home-visual img {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.25));
+    }
+    .pet-home-content {
+      display: grid;
+      gap: 9px;
+      min-width: 0;
+    }
+    .pet-home-kicker,
+    .pet-panel-eyebrow {
+      color: var(--accent2);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+    }
+    .pet-home-content h2 {
+      font-size: 21px;
+      line-height: 1.25;
+    }
+    .pet-home-content p,
+    .pet-panel-head p {
+      color: var(--text2);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .pet-home-metrics {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--text2);
+      font-size: 12px;
+    }
+    .pet-home-metrics span {
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+    .pet-home-metrics strong { color: var(--text); }
+    .pet-progress-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--text2);
+      font-size: 12px;
+      align-items: center;
+    }
+    .pet-progress-row strong {
+      color: var(--accent2);
+      white-space: nowrap;
+    }
+    .pet-large-progress { height: 8px; }
+    .pet-panel-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(4,7,17,.62);
+      z-index: 500;
+      display: flex;
+      justify-content: flex-end;
+      backdrop-filter: blur(3px);
+    }
+    .pet-panel {
+      width: min(760px, calc(100vw - 48px));
+      height: 100%;
+      overflow-y: auto;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 26px;
+      box-shadow: -18px 0 50px rgba(0,0,0,.25);
+    }
+    .pet-panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .pet-panel-head h2 {
+      font-size: 24px;
+      margin: 5px 0 6px;
+    }
+    .pet-panel-close {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+    }
+    .pet-panel-main {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: linear-gradient(135deg, rgba(78,205,196,.1), rgba(237,137,54,.08)), var(--surface2);
+      margin-bottom: 18px;
+    }
+    .pet-panel-hero {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+    .pet-panel-hero img {
+      width: 210px;
+      height: 210px;
+      object-fit: contain;
+      filter: drop-shadow(0 12px 22px rgba(0,0,0,.28));
+    }
+    .pet-panel-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .pet-panel-stats div {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: var(--surface);
+    }
+    .pet-panel-stats span {
+      display: block;
+      color: var(--text2);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .pet-panel-stats strong {
+      font-size: 18px;
+      color: var(--accent2);
+    }
+    .pet-panel-progress {
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .pet-stage-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .pet-stage-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface2);
+      padding: 10px;
+      opacity: .44;
+      display: grid;
+      gap: 6px;
+      min-height: 150px;
+    }
+    .pet-stage-card.unlocked { opacity: 1; }
+    .pet-stage-card.active {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 2px rgba(78,205,196,.14);
+    }
+    .pet-stage-card img {
+      width: 76px;
+      height: 76px;
+      object-fit: contain;
+      justify-self: center;
+    }
+    .pet-stage-card strong {
+      display: block;
+      font-size: 12px;
+      color: var(--accent2);
+      margin-bottom: 2px;
+    }
+    .pet-stage-card span {
+      font-size: 12px;
+      color: var(--text);
+      line-height: 1.35;
+    }
+    .pet-event-list {
+      display: grid;
+      gap: 8px;
+    }
+    .pet-event-list h3 {
+      font-size: 16px;
+      margin-bottom: 2px;
+    }
+    .pet-event {
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+    }
+    .pet-event strong { font-size: 13px; }
+    .pet-event span {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+    .pet-event.empty { color: var(--text2); font-size: 13px; }
+
+    /* ========== CAPABILITY ROADMAP ========== */
+    .roadmap-page {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      gap: 26px;
+    }
+    .roadmap-hero {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 0 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .roadmap-kicker {
+      color: var(--accent2);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .roadmap-hero h1 {
+      font-size: 30px;
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+    .roadmap-hero p {
+      max-width: 680px;
+      color: var(--text2);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+    .roadmap-hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .roadmap-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .roadmap-summary-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 16px;
+      display: grid;
+      gap: 6px;
+    }
+    .roadmap-summary-card.emphasis {
+      border-color: rgba(78,205,196,.45);
+      background: linear-gradient(135deg, rgba(78,205,196,.12), rgba(108,99,255,.08)), var(--surface);
+    }
+    .roadmap-summary-card .summary-label {
+      color: var(--text2);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .roadmap-summary-card strong {
+      color: var(--text);
+      font-size: 24px;
+      line-height: 1.2;
+    }
+    .roadmap-summary-card span:last-child {
+      color: var(--text2);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .roadmap-principles {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .principle-item {
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      background: var(--surface);
+      color: var(--text2);
+      padding: 13px 14px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .roadmap-section {
+      display: grid;
+      gap: 16px;
+    }
+    .roadmap-section-header h2 {
+      font-size: 21px;
+      margin-bottom: 6px;
+    }
+    .roadmap-section-header p {
+      color: var(--text2);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .capability-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .capability-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+    .capability-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .capability-card h3 {
+      font-size: 17px;
+      line-height: 1.35;
+    }
+    .capability-card-top span {
+      color: var(--accent2);
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .capability-target {
+      color: var(--text2);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .capability-progress {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    .capability-progress div {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+    .capability-meta,
+    .capability-focus {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .capability-meta span,
+    .capability-focus span {
+      border-radius: 999px;
+      background: var(--surface2);
+      color: var(--text2);
+      padding: 4px 9px;
+      font-size: 12px;
+    }
+    .capability-signals {
+      display: grid;
+      gap: 6px;
+      color: var(--text2);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .capability-signals div::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: var(--accent2);
+      vertical-align: 1px;
+    }
+    .capability-docs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 2px;
+    }
+    .capability-docs button {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1.4;
+      padding: 5px 8px;
+      max-width: 100%;
+      text-align: left;
+    }
+    .capability-docs button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .capability-docs span {
+      color: var(--text2);
+      font-size: 12px;
+    }
+    .capability-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 2px;
+    }
+    .roadmap-phase-list {
+      display: grid;
+      gap: 10px;
+    }
+    .roadmap-phase {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 14px;
+    }
+    .phase-index {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--surface2);
+      color: var(--accent2);
+      font-weight: 800;
+    }
+    .phase-body h3 {
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .phase-body p,
+    .phase-output {
+      color: var(--text2);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .phase-actions {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      margin: 8px 0;
+    }
+    .phase-actions span {
+      background: var(--surface2);
+      border-radius: 999px;
+      color: var(--text2);
+      font-size: 12px;
+      padding: 3px 8px;
+    }
+    .followup-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .followup-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 15px;
+    }
+    .followup-card h3 {
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .followup-card p {
+      color: var(--text2);
+      font-size: 12px;
+      line-height: 1.65;
+      margin-bottom: 8px;
+    }
 
     /* ========== TECH BREAKER CANVAS ========== */
     .breaker-page {

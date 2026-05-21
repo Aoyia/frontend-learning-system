@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { LEARNING_CONTENT } from '../data/learning-content.js';
 import { dbDelete, dbPut } from './storage/learnDb.js';
 import { Home } from './pages/Home.jsx';
+import { CapabilityRoadmap } from './pages/CapabilityRoadmap.jsx';
 import { TechBreakerMap } from './pages/TechBreakerMap.jsx';
 import { TechBreakerCard } from './pages/TechBreakerCard.jsx';
 import { ModuleSelect } from './pages/ModuleSelect.jsx';
@@ -14,6 +15,8 @@ import { QuizPage } from './pages/QuizPage.jsx';
 import { QuizResult } from './pages/QuizResult.jsx';
 import { Sidebar } from './components/Sidebar.jsx';
 import { AnswerCard } from './components/AnswerCard.jsx';
+import { PetWidget } from './components/PetWidget.jsx';
+import { PetPanel } from './components/PetPanel.jsx';
 import {
   DEFAULT_DRILL_LIMIT,
   createQuizState,
@@ -24,18 +27,38 @@ import {
   orderQuestionsByType,
 } from './utils/quiz.js';
 import { getBreakerCard, getBreakerQuestions } from './utils/techBreaker.js';
+import {
+  PET_EVENT_LIMIT,
+  applyPetReward,
+  getPetStage,
+  makePetEvent,
+  makeQuizReward,
+  makeReadReward,
+} from './utils/pet.js';
 import { useImmersiveController } from './hooks/useImmersiveController.js';
 import { useLearningDb } from './hooks/useLearningDb.js';
 import { useMarkdownEnhancements } from './hooks/useMarkdownEnhancements.js';
 import { useThemeController } from './hooks/useThemeController.js';
 
-const PAGES = ['home', 'breaker', 'learn', 'drill', 'wrongbook'];
+const PAGES = ['home', 'roadmap', 'breaker', 'learn', 'drill', 'wrongbook'];
 
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useThemeController();
-  const { db, progressCache, setProgressCache, drillStatCache, setDrillStatCache, wrongBookCache, setWrongBookCache } = useLearningDb();
+  const {
+    db,
+    progressCache,
+    setProgressCache,
+    drillStatCache,
+    setDrillStatCache,
+    wrongBookCache,
+    setWrongBookCache,
+    petState,
+    setPetState,
+    petEvents,
+    setPetEvents,
+  } = useLearningDb();
   const [page, setPage] = useState('home');
   const { immersiveMode, setImmersiveMode, toolbarVisible } = useImmersiveController(page);
   const [currentModuleId, setCurrentModuleId] = useState(null);
@@ -44,6 +67,7 @@ function App() {
   const [quizState, setQuizState] = useState(null);
   const [answerCardCollapsed, setAnswerCardCollapsed] = useState(false);
   const [mobileAnswerCardOpen, setMobileAnswerCardOpen] = useState(false);
+  const [petPanelOpen, setPetPanelOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   const contentRef = useRef(null);
@@ -57,6 +81,12 @@ function App() {
     const parts = location.pathname.split('/').filter(Boolean);
     if (parts.length === 0) {
       setPage('home');
+      setQuizState(null);
+      setMobileAnswerCardOpen(false);
+      return;
+    }
+    if (parts[0] === 'roadmap') {
+      setPage('roadmap');
       setQuizState(null);
       setMobileAnswerCardOpen(false);
       return;
@@ -203,8 +233,24 @@ function App() {
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   }
 
+  async function grantPetReward(reward) {
+    if (!reward?.xp) return;
+    const now = Date.now();
+    const previousStage = getPetStage(petState.xp || 0);
+    const nextState = applyPetReward(petState, reward, now);
+    const event = makePetEvent(reward, nextState, previousStage, now);
+    setPetState(nextState);
+    setPetEvents(prev => [event, ...prev].slice(0, PET_EVENT_LIMIT));
+    if (db) {
+      await dbPut(db, 'petState', nextState);
+      await dbPut(db, 'petEvents', event);
+    }
+    showToast(`${event.title} · 修为 +${nextState.xp - (petState.xp || 0)}`);
+  }
+
   function setRoute(nextPage, opts = {}) {
     if (nextPage === 'home') navigate('/');
+    if (nextPage === 'roadmap') navigate('/roadmap');
     if (nextPage === 'breaker') navigate(opts.nodeId ? `/breaker/card/${opts.nodeId}` : '/breaker');
     if (nextPage === 'learn') navigate(opts.moduleId ? `/learn/${opts.moduleId}/${opts.docIdx ?? 0}` : '/learn');
     if (nextPage === 'drill') navigate('/drill');
@@ -217,8 +263,14 @@ function App() {
 
   async function markDone(moduleId, docIdx, startQuiz) {
     const key = `${moduleId}__${docIdx}`;
+    const alreadyDone = progressCache[key];
     setProgressCache(prev => ({ ...prev, [key]: true }));
     if (db) await dbPut(db, 'progress', { id: key, done: true });
+    if (!alreadyDone) {
+      const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
+      const docTitle = module?.docs?.[docIdx]?.title || '学习文章';
+      await grantPetReward(makeReadReward(docTitle));
+    }
     if (startQuiz) startDocQuiz(moduleId, docIdx);
   }
 
@@ -386,6 +438,7 @@ function App() {
         time: Date.now(),
       });
     }
+    await grantPetReward(makeQuizReward(quizState));
     navigate('/result');
     setMobileAnswerCardOpen(false);
   }
@@ -421,11 +474,22 @@ function App() {
         <div className="nav-tabs">
           {PAGES.map(name => (
             <button key={name} className={`nav-tab ${activeNavPage === name ? 'active' : ''}`} onClick={() => setRoute(name)}>
-              {name === 'home' ? '首页' : name === 'breaker' ? '🗺️ 破冰' : name === 'learn' ? '📖 学习' : name === 'drill' ? '🎯 刷题' : '🧩 错题本'}
+              {name === 'home'
+                ? '首页'
+                : name === 'roadmap'
+                  ? '🧭 路线'
+                  : name === 'breaker'
+                    ? '🗺️ 破冰'
+                    : name === 'learn'
+                      ? '📖 学习'
+                      : name === 'drill'
+                        ? '🎯 刷题'
+                        : '🧩 错题本'}
             </button>
           ))}
         </div>
         <div className="nav-actions">
+          <PetWidget petState={petState} onOpen={() => setPetPanelOpen(true)} />
           <button
             className="theme-toggle-btn"
             onClick={toggleTheme}
@@ -449,8 +513,28 @@ function App() {
           {page === 'home' && (
             <Home
               progressCache={progressCache}
+              petState={petState}
+              onOpenPet={() => setPetPanelOpen(true)}
+              onOpenRoadmap={() => setRoute('roadmap')}
               onOpenBreaker={() => setRoute('breaker')}
               onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })}
+            />
+          )}
+          {page === 'roadmap' && (
+            <CapabilityRoadmap
+              progressCache={progressCache}
+              wrongBookCache={wrongBookCache}
+              onOpenBreaker={() => setRoute('breaker')}
+              onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })}
+              onOpenDoc={navToDoc}
+              onOpenDrill={(moduleId) => {
+                if (moduleId) startDrill(moduleId);
+                else setRoute('drill');
+              }}
+              onOpenWrongBook={(moduleId) => {
+                if (moduleId) startWrongBook(moduleId);
+                else setRoute('wrongbook');
+              }}
             />
           )}
           {page === 'breaker' && !currentBreakerNodeId && (
@@ -528,6 +612,13 @@ function App() {
           />
         )}
       </div>
+      {petPanelOpen && (
+        <PetPanel
+          petState={petState}
+          petEvents={petEvents}
+          onClose={() => setPetPanelOpen(false)}
+        />
+      )}
     </>
   );
 }

@@ -574,6 +574,12 @@ Vue 3 的 `provide / inject` 是一种依赖注入机制，用来解决深层组
 
 `inject` 时，Vue 并不是手动递归父组件链，而是从父组件的 `provides` 开始，用 `key in provides` 触发 JavaScript 原型链查找，从而找到最近的 provider。
 
+| 方案 | 适合场景 | 特点 |
+|---|---|---|
+| props | 父传子，层级较浅 | 显式、清晰、数据流容易追踪 |
+| emits | 子组件通知父组件 | 事件向上流动 |
+| provide / inject | 祖先给深层后代提供上下文 | 避免 props drilling |
+
 另外，`provide / inject` 本身不制造响应式。只有提供的值本身是 `ref`、`reactive` 或 `computed` 时，注入方拿到后才会保持响应式连接。
 
 ## 17. 作业
@@ -596,6 +602,8 @@ Vue 3 的 `provide / inject` 是一种依赖注入机制，用来解决深层组
 
 Vue 3 的 `provide / inject` 本质是基于组件实例 `provides` 对象和 JavaScript 原型链实现的依赖注入机制，用来解决深层组件传值问题。
 
+---
+
 ## 📝 面试题自测
 
 ### Q1 [single]
@@ -605,7 +613,14 @@ B. 深层组件依赖一层层 props 中转的问题
 C. 组件样式隔离问题
 D. 服务端渲染 hydration 问题
 答案：B
-解析：provide / inject 的典型场景是解决 props drilling，让祖先组件向任意深度的后代提供上下文。
+解析：
+💡 它解决了什么问题：
+如果不引入 `provide / inject` 依赖注入机制，当组件树的层级极深且叶子节点需要依赖根节点的全局配置、主题或表单状态时，就必须通过每一层中间组件显式传递 props（即 Prop Drilling）。这会导致中间组件的代码冗余，对无关 props 的修改极易引发不相关的组件重绘，且当系统重构、删除或增加中间层时，props 维护成本呈指数级上升。
+
+🔍 核心原理解析（防拷打）：
+1. 依赖注入（DI）机制将数据的供给者（Provider）和消费者（Consumer）完全解耦。消费者不需要关心数据经历了多少层物理组件才传递到它这里，只需要声称它需要某 key 即可。
+2. 设计取舍：相较于将所有上下文都存储到外部全局状态管理（如 Pinia）的暴利方案，`provide / inject` 可以被局限在以某一组件为根的任意子树中。这允许在同一个页面中实例化多组完全隔离的上下文（例如多个独立的 Form 表单或 Tab 列表），这是单例 store 很难直接且干净地做到的。
+3. 进一步拓展大厂面试追问：在组件库内部协作时，它还能极大地精简模板结构。例如组件库使用者只需要编写 `<Form><FormItem><Input /></FormItem></Form>`，无需在 `FormItem` 和 `Input` 上重复绑定表单模型或校验规则，从而由 `Form` 祖先同步注入给后代组件。
 
 ### Q2 [single]
 在 Vue 3 组件实例创建时，子组件默认的 `provides` 通常是什么？
@@ -614,7 +629,14 @@ B. 父组件的 `provides`
 C. 当前组件的 `props`
 D. 当前 app 的 `config.globalProperties`
 答案：B
-解析：子组件默认复用父组件的 provides，只有第一次调用 provide 时才创建自己的 provides。
+解析：
+💡 它解决了什么问题：
+如果不采用子组件默认复用父组件 `provides` 的策略，而是在组件创建的第一时间就为每个组件都分配一个新的独立 `provides` 容器（并把父级的数据拷贝过来），那么当页面上存在上千个甚至上万个组件时，会产生严重的内存垃圾和不必要的对象开销。同时，上层 provider 的数据变化也无法实时透过共享引用向下传递。
+
+🔍 核心原理解析（防拷打）：
+1. 在初始化组件实例的 `createComponentInstance` 阶段，子组件的 `provides` 指针会直接指向父组件的 `provides` 引用：`provides: parent ? parent.provides : Object.create(appContext.provides)`。
+2. 设计取舍：这是一种极为高效的“惰性共享引用（Lazy Sharing）”设计。在子组件没有调用 `provide` 自建命名空间前，整条树上所有未提供新数据的组件都共享父组件的 `provides` 对象，实现了内存占用的最小化。
+3. 进一步拓展大厂面试追问：如果在父组件 `provide` 了一个新值后，子组件再通过 `provide` 提供另一个值，子组件的 `provides` 会变化吗？是的，此时子组件由于“写时复制（Copy-on-write）”机制，会重新创建属于自己的 `provides` 独立对象，并将原型链指向上层，从而实现了“子修改不污染父，但子能访问父”的隔离与共享效果。
 
 ### Q3 [single]
 在 Vue 3 中，某组件第一次调用 `provide` 时，Vue 为什么要执行 `Object.create(parentProvides)`？
@@ -623,12 +645,26 @@ B. 为了创建自己的 provides，同时通过原型链继承父级 provides
 C. 为了把父组件 provides 清空
 D. 为了让所有 inject 都变成异步
 答案：B
-解析：Object.create(parentProvides) 让当前组件拥有自己的 provides，又能通过原型链继续访问父级提供的数据。
+解析：
+💡 它解决了什么问题：
+如果不通过原型链关联 `parentProvides`，而是直接将子组件的 `provides` 设为一个全新的独立对象，那么一旦子组件 `provide` 了任何数据，它就会彻底切断与上层祖先组件 `provides` 的联系。后代组件将无法再通过该子组件注入任何来自更上层祖先（如爷爷组件、App 级）的数据，从而破坏了依赖传递链。
+
+🔍 核心原理解析（防拷打）：
+1. 在首次调用 `provide` 时，Vue 检测到当前组件的 `provides` 与其父组件的 `provides` 引用相同。为了不直接污染父级，Vue 此时执行 `provides = instance.provides = Object.create(parentProvides)`。
+2. 设计取舍：`Object.create` 创建了一个干净的空对象，但其内部的 `[[Prototype]]` 指向了父组件的 `parentProvides`。当对该对象写入新的键值对时，它们只会作为组件自身的普通属性（Own Properties）被保存，不会污染父组件的原型对象；而当读取属性时，JavaScript 引擎会沿原型链天然地向上回溯。
+3. 进一步拓展大厂面试追问：如果组件连续调用两次 `provide`，会执行两次 `Object.create` 吗？不会，因为第一次执行后，`instance.provides` 与 `parentProvides` 的引用就已经不再相等，后续的 `provide` 调用会直接在这个已建立的原型对象上写值。
 
 ### Q4 [judgment]
 在 Vue 3 的组件树中，`inject` 必须手动 while 遍历父组件链，才能找到祖先 provider。
 答案：错
-解析：provides 对象已经通过原型链串起来，inject 通过 `key in provides` 即可触发原型链查找。
+解析：
+💡 它解决了什么问题：
+如果在 `inject` 时必须在运行时通过 `while` 循环去逐级遍历 `instance.parent.parent...` 链条并一一检索键值，那么当组件层级非常深（例如在巨型动态表单或虚拟列表中，层级可能达到数十层）时，每次 `inject` 都会带来严重的遍历寻址开销，拉低运行时的求值性能。
+
+🔍 核心原理解析（防拷打）：
+1. Vue 3 巧妙地将组件层级树投射到了 JavaScript 的“对象原型链”上。通过 `provides = Object.create(parentProvides)`，所有的祖先 provides 节点已在内存中形成了一条隐式原型链。
+2. 设计取舍：虽然原型链的建立需要消耗一次 `Object.create` 的微小分配成本，但换来的是后代组件在 `inject` 时，只需通过 `key in provides` 或是直接访问属性，就能在底层引擎层面直接回溯并返回，避开了频繁的 JavaScript 函数调用和 while 循环遍历。
+3. 进一步拓展大厂面试追问：在 Vue 2 中是如何实现的？Vue 2 由于没有使用原型链，在 `inject` 阶段确实需要写一个 `while (current)` 循环来沿父组件链手动向上寻找 `provides` 容器。这也是 Vue 3 核心架构师对性能和内存做出的重大重构之一。
 
 ### Q5 [single]
 在 Vue 3 中，`inject` 查找依赖时使用 `key in provides` 而不是 `hasOwnProperty` 的关键原因是？
@@ -637,7 +673,14 @@ B. `in` 会自动创建默认值
 C. `in` 可以让普通值变成 ref
 D. `hasOwnProperty` 不能判断字符串 key
 答案：A
-解析：provide / inject 的核心查找依赖原型链，`in` 会检查对象自身和原型链上的属性。
+解析：
+💡 它解决了什么问题：
+如果不使用 `in` 操作符而使用 `hasOwnProperty`，`hasOwnProperty` 只会局限在直接父组件的 `provides` 对象自身属性上进行检索。一旦该值来自爷爷组件或根组件（即通过原型继承的上层属性），`hasOwnProperty` 将返回 `false`，从而导致 `inject` 无法跨越单层父组件获取更深层的数据。
+
+🔍 核心原理解析（防拷打）：
+1. `in` 操作符会检索对象自身及其隐式原型 `__proto__` 指向的所有上层原型链；而 `hasOwnProperty` 是专用于判断对象“自身拥有的非继承属性”的 API。
+2. 设计取舍：在 `inject` 机制中，由于祖先组件的 `provides` 被串联在了隐式原型上，使用 `key in provides` 才能与 Vue 3 独创的原型链继承存储结构无缝配合。
+3. 进一步拓展大厂面试追问：使用 `in` 操作符有什么潜在隐患吗？因为 `in` 也会把 `Object.prototype` 上的自带属性（如 `toString`、`valueOf`）判定为存在。因此，如果用户误将 `toString` 作为 inject 的 key，且没有传入默认值，将会错误地注入 Object 原生方法。在实际开发中，应尽量避免使用原生 Object 属性名作为 InjectionKey，最好使用 Symbol。
 
 ### Q6 [single]
 在 Vue 3 中，如果根组件 `App` 和中间组件 `Page` 都通过 `provide('theme')` 提供了相同键名的值，那 `Page` 的深层后代通过 `inject('theme')` 最终会拿到哪个值？
@@ -646,12 +689,26 @@ B. Page 提供的值
 C. 两个值组成的数组
 D. undefined
 答案：B
-解析：同名 provider 遵循就近原则，最近的 provider 会覆盖更上层的 provider。
+解析：
+💡 它解决了什么问题：
+如果不遵循就近覆盖原则，而是粗暴地允许多个同名 provider 的值混合在一起或让最外层的值优先，那么在编写通用的复杂子系统（如局部多主题包覆、局部多语言覆盖）时，局部组件就无法通过再次 `provide` 同名 key 来临时局部改写配置，从而导致框架的上下文覆盖能力受限。
+
+🔍 核心原理解析（防拷打）：
+1. 当后代组件 `inject` 某 key 时，Vue 会从当前组件的直接父级的 `provides` 对象开始查找。
+2. 因为原型链的遮蔽效应（Property Shadowing）：如果原型链上较近的节点（例如子对象的 Own Properties）中已经定义了该属性，JavaScript 引擎在读取时会直接将其返回，阻止继续向上寻址到更远的原型（父对象的属性）。
+3. 进一步拓展大厂面试追问：如果后代组件需要“绕过”最近的 `Page` provider，强行去读取 `App` 提供的值，这在 Vue 的官方 API 中支持吗？官方不支持，因为原型链遮蔽是单向的且无法透传。但如果确实需要该能力，必须在顶层 `App` provide 时使用一个特异化的 Key（例如 `globalThemeKey`），并在注入端显式声明。
 
 ### Q7 [judgment]
 在 Vue 3 中，`provide / inject` 本身会自动把普通值包装成响应式数据。
 答案：错
-解析：provide / inject 只是传值机制，是否响应式取决于提供的值本身是不是 ref、reactive、computed 等响应式对象。
+解析：
+💡 它解决了什么问题：
+如果 `provide` 自动将所有普通值包装为响应式对象（例如隐式转化为 `ref`），不仅会造成额外的内存分配负担，还会因为隐式的解包/包装行为，导致数据流在传输时失去显式掌控，让原本不需要响应式的静态配置或工具函数强行被追踪，损耗响应式追踪性能。
+
+🔍 核心原理解析（防拷打）：
+1. `provide` 只是单纯的对象属性写操作，`inject` 也只是单纯的读操作。它们不具备任何类似 `ref` 或 `reactive` 收集依赖（track）和派发更新（trigger）的包裹拦截逻辑。
+2. 设计取舍：Vue 提倡“关注点分离”，让响应式（Reactivity System）与上下文传参（Dependency Injection）作为两套完全独立的引擎运行。如果需要数据在跨组件传输时保持同步更新，开发者应当主动传递一个由响应式系统包装好的对象（如 `ref(xxx)`、`reactive(obj)`）。
+3. 进一步拓展大厂面试追问：在注入端，如果通过 `inject` 拿到了一个 `ref` 或者是 `computed`，在 Composition API 中我们需要通过 `.value` 来访问和操作它。但在 Options API 的 `inject` 选项中，Vue 内部是否会自动为我们做解包呢？在 Options API 的 runtime 处理阶段，Vue 会对注入项进行拦截，若检测到是 Ref 对象，会在将其挂载到组件代理对象 `ctx` 上时自动进行解包代理，让 Options 语法中能够像普通 data 一样通过 `this.xxx` 访问。
 
 ### Q8 [single]
 在 Vue 3 中，如果祖先组件通过 `provide` 提供的是一个 `ref(0)`，那么后代组件在 `setup()` 里通过 `inject` 拿到的是什么？
@@ -660,7 +717,14 @@ B. ref 对象本身
 C. 只读字符串
 D. 一个 Promise
 答案：B
-解析：官方文档说明 ref 会按原样注入，不会自动解包，这样可以保留响应式连接。
+解析：
+💡 它解决了什么问题：
+如果在依赖注入传输的过程中，Ref 对象被隐式、自动解包为底层的值（例如 number `0`），那么后代组件将彻底丢失与祖先组件响应式状态的引用连接。当祖先的 `ref` 值在后续发生变更时，后代组件拿到的仅仅是当时的静态基础数值，无法感知更新并触发自身的重绘，这会让响应式网络在跨层级传输时断裂。
+
+🔍 核心原理解析（防拷打）：
+1. 依赖注入只在传递时拷贝属性引用的地址。因为 `Ref` 对象本身是一个引用类型（`RefImpl`），它在 `provides` 对象中是以原始对象地址保存的，在 `inject` 获取时仅仅是返回了相同的内存指针，因此不会发生解包。
+2. 设计取舍：在 `setup` 期间保持 Ref 不解包，使得后代组件可以显式通过 `.value` 或在模板中进行依赖追踪；而在组件库设计中，也能方便后代直接将此 `ref` 作为计算属性或其它 `watch` 的监听源。
+3. 进一步拓展大厂面试追问：如果后代组件修改了这个注入的 `ref.value`，祖先组件的值会变吗？会变，因为它们共享同一个 Ref 对象的引用。为了遵循“单向数据流”原则，避免后代组件隐式修改祖先状态导致 Bug 难排查，推荐在 `provide` 时提供 `readonly(ref)`，或者单独暴露一个专用的 `update` 修改函数。
 
 ### Q9 [multiple]
 在 Vue 3 开发中，下面哪些场景适合使用 `provide / inject` 进行依赖注入？
@@ -669,7 +733,14 @@ B. Tabs 向 TabPane 提供 activeKey 和切换方法
 C. 普通父子组件传一个按钮文案
 D. 插件提供全局服务或配置
 答案：ABD
-解析：provide / inject 适合上下文、组件库内部协作和插件能力注入；普通父子传值用 props 更清晰。
+解析：
+💡 它解决了什么问题：
+如果将所有的普通父子传值或极其明确的单层父子通信都改用 `provide / inject`，会导致代码失去显式的 props 数据流向。对于维护者来说，查看子组件模板时很难一眼看出数据的来源和变更时机，导致系统的“隐式耦合”度大幅升高，增加维护难度。
+
+🔍 核心原理解析（防拷打）：
+1. 适用于“隐式上下文共享（Implicit Context Sharing）”场景。当子组件的结构和数量是动态的、嵌套的，且这些子组件天然作为父级容器的逻辑分支时（如 `FormItem` 必须要知道 `Form` 实例），Props 变得极难扩展，此时 DI 是唯一的解。
+2. 设计取舍：Vue 的组件通信手段多样化：Props/Emits 保证了强类型、显式的组件契约；Pinia 解决了跨路由、无逻辑树关联的纯业务状态共享；而 `provide / inject` 则专为“具有逻辑树层级关系、需要上下文深度传递”的架构组件所设计。
+3. 进一步拓展大厂面试追问：对于第三方库（如 Vue Router 里的 `useRouter()`），它们在底层是如何获取路由实例的？它们正是通过在全局 `app.provide` 注册路由单例，并在 Composition API 暴露的 `useRouter` 辅助函数中同步调用 `inject(routerKey)` 来获取的。
 
 ### Q10 [single]
 在 Vue 3 中，通过全局应用实例 `app.provide()` 提供的数据最终主要存在哪里？
@@ -678,12 +749,26 @@ B. window.__VUE_PROVIDES__
 C. 每个组件的 props
 D. Pinia store
 答案：A
-解析：app.provide 会写入应用上下文的 provides，根组件和后代组件的 inject 可以从这里查到应用级依赖。
+解析:
+💡 它解决了什么问题：
+如果不设计一个应用级的应用上下文 `appContext.provides`，而是让每个 app 实例的全局 provide 都在每个组件创建时强行塞入组件实例中，不仅会导致根组件创建前的 provides 分配无序，还会让多个并存的 app 实例（例如在微前端或 SSR 场景下）的全局注入发生命名空间冲突和内存泄露。
+
+🔍 核心原理解析（防拷打）：
+1. `app.provide(key, value)` 会直接写在应用实例的 `appContext.provides[key] = value` 上。
+2. 当渲染根组件（Root Component）并调用 `createComponentInstance` 时，它的 `provides` 指针是基于 `Object.create(appContext.provides)` 来初始化的。这让所有的组件在溯源原型链时，都能在最顶层寻址到应用上下文提供的全局依赖。
+3. 进一步拓展大厂面试追问：如果中间某个组件调用了 `provide` 重写了全局 app 提供的某个 key，那么会影响到其它子树上 inject 相同 key 的组件吗？完全不会。因为中间组件的 `Object.create(parentProvides)` 为其自身的子树切分出了独立的隐式原型节点，重写只会遮蔽该组件以下的子树，其它无关联的兄弟子树在原型链向上回溯时，依然只能寻址到最顶端的 `appContext.provides`。
 
 ### Q11 [judgment]
 在 Vue 3 中，`provide()` 和 `inject()` 都依赖当前组件实例，因此应在 `setup()` 阶段同步调用。
 答案：对
-解析：二者依赖 currentInstance；setup 执行期间 Vue 才能确定当前调用属于哪个组件实例。
+解析：
+💡 它解决了什么问题：
+如果不在 `setup` 同步执行期间锚定当前组件实例，而是允许在异步回调（如 `setTimeout`、`await fetch`）之后调用 `provide` / `inject`，此时由于当前的 JavaScript 调用栈早已经退出了 setup 的生命周期，全局变量 `currentInstance` 已被重置为 `null`。Vue 将无法判定该调用发生在哪个组件实例内部，从而无法获取其 `provides` 或 `parent.provides`，引发运行时报错。
+
+🔍 核心原理解析（防拷打）：
+1. Vue 在运行 setup 时，会通过 `setCurrentInstance(instance)` 将实例暂时缓存到全局单例变量中。由于 JavaScript 是单线程的，setup 期间的同步代码可以通过该全局变量安全地拿到当前实例。而一旦 setup 执行完毕，Vue 必定同步调用 `setCurrentInstance(null)` 清空缓存。
+2. 设计取舍：很多库为了保证异步可用，可能会尝试闭包持有实例。但 Vue 坚持不这么做，是因为闭包持久化组件实例会导致巨大的内存泄露隐患，且在并发渲染（如 SSR）时会导致严重的实例上下文错乱。
+3. 进一步拓展大厂面试追问：如果我必须在异步请求后进行 `provide`，有什么绕过的方案吗？可以通过在 setup 的同步阶段先创建一个响应式对象并 `provide` 出去，随后在异步回调中去修改该响应式对象内部的属性。这样既遵守了同步调用的规范，又实现了异步数据的动态共享。
 
 ### Q12 [multiple]
 在 Vue 3 开发中，排查深层组件 `inject()` 得到 `undefined` 时，应该优先检查哪些点？
@@ -692,4 +777,11 @@ B. provide / inject 的 key 是否一致
 C. 是否在 setup 同步阶段调用
 D. CSS scoped 是否开启
 答案：ABC
-解析：inject undefined 通常与父链、key、调用时机或 app.provide 注册时机有关，和 scoped CSS 无关。
+解析：
+💡 它解决了什么问题：
+如果在遇到 `inject()` 得到 `undefined` 时没有一套清晰的、基于底层原理的工程排查链路，开发者可能会在不相干的地方（如 scoped 样式、Props 传递、打包配置等）盲目尝试，极大增加定位和解决 Bug 的时间成本。
+
+🔍 核心原理解析（防拷打）：
+1. 注入依赖失败的底层根源只可能是：1) 原型链查找范围越界（Provider 不在父子链路树上）；2) 原型链属性 Key 匹配失败（如拼写错误或 Symbol 引用不同）；3) 调用时机错误导致 `currentInstance` 未被捕获。
+2. 排查三部曲：第一步，验证物理依赖树。可以通过 Vue Devtools 检查目标 Consumer 组件的 `provides` 面板中是否存在上游继承的原型链，若无，证明祖先未挂载或非父子树关系。第二步，验证 Key 指针。在跨包或微前端中，直接字符串 key 拼写不符或两端独立引用的 Symbol 不相等会导致 `in` 查找失败。第三步，验证执行时机。必须确保在 setup 同步顶层中执行了获取。
+3. 进一步拓展大厂面试追问：如果某些注入确实是可选的，为了防止返回 `undefined` 导致程序崩溃，`inject` 提供了什么防御性机制？`inject` 的第二个参数支持传入默认值（Default Value），如果未能在原型链上搜寻到 Key，会退回返回该默认值；同时还支持第三个参数 `treatDefaultAsFactory: boolean` 来确定是否将默认值作为工厂函数执行，从而动态创建复杂的默认对象。

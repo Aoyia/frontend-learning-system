@@ -77,12 +77,48 @@ steps:
         { title: 'SemVer 语义化版本规范', url: 'https://semver.org/lang/zh-CN/' },
       ],
       quiz: [
-        single('依赖可复现最核心的资产是什么？', ['README', 'lockfile', '页面截图', 'CSS reset'], 1, 'lockfile 记录实际解析出的依赖树，是不同环境安装一致的基础。'),
-        multiple('排查 CI 安装结果和本地不一致时，应优先检查哪些项？', ['lockfile 是否一致', 'Node 和包管理器版本', 'registry 来源', '按钮交互动画'], [0, 1, 2], '依赖解析受 lockfile、运行时、包管理器和 registry 影响。'),
-        judgment('package.json 中写了 ^1.2.0，就能保证所有机器永远安装 1.2.0。', 1, '版本范围允许解析到兼容新版本，必须依赖 lockfile 锁定实际结果。'),
-        single('组件库把 React 放入 peerDependencies 的主要原因是？', ['避免宿主出现多份 React 或版本冲突', '让 CSS 自动隔离', '减少 HTML 文件', '提升 DNS 命中率'], 0, 'React/Vue 这类宿主框架通常应由业务项目提供。'),
-        multiple('CI 中更稳的依赖安装策略包括？', ['提交 lockfile', '使用 frozen install', '固定包管理器版本', '每次自动升级所有依赖'], [0, 1, 2], '自动升级依赖会引入不可控变化。'),
-        single('install scripts 的风险更接近什么？', ['安装阶段执行第三方代码，可能影响构建和安全', '只能修改字体', '只能删除图片', '不会影响任何结果'], 0, '安装脚本有执行能力，应纳入供应链治理。'),
+        single('依赖可复现最核心的资产是什么？', ['README', 'lockfile', '页面截图', 'CSS reset'], 1, `💡 它解决了什么问题：
+解决了在团队协作与持续集成(CI)中，因 package.json 声明的语义化版本范围（SemVer range，如 \`^\`、\`~\`）导致的“版本漂移”问题。若不锁定并提交 lockfile，不同环境拉取依赖会导致最终解析出的物理依赖版本不一致，从而引发“本地运行正常，CI 构建失败”的诡异缺陷。
+
+🔍 核心原理解析（防拷打）：
+1. 依赖树拓扑锁死：lockfile 记录了包含所有直接依赖和深度嵌套子依赖的完整拓扑结构，以及确切的版本号、下载源（Resolved URL）和完整性校验值（Integrity hash）。
+2. 避免重复解析：包管理器再次安装时，若存在 lockfile，可直接对照拓扑关系下载解压包，而无需重新向 Registry 发起网络请求来计算约束关系。
+3. 校验防篡改：通过 integrity hash（如 sha512），保证在不同网络环境和机器上下载的包内容完全一致，防止私有源或公共源的包内容被恶意篡改或投毒。`),
+        multiple('排查 CI 安装结果和本地不一致时，应优先检查哪些项？', ['lockfile 是否一致', 'Node 和包管理器版本', 'registry 来源', '按钮交互动画'], [0, 1, 2], `💡 它解决了什么问题：
+解决了依赖安装链路中由于物理环境、网络源、版本控制差异造成的“本地开发正常，CI/CD 构建失败”或产物异常的问题，避免盲目排查业务代码本身。
+
+🔍 核心原理解析（防拷打）：
+1. 解析引擎算法版本差异：不同版本的 Node.js 和包管理器（如 npm 9 对比 npm 10，或 pnpm 8 对比 pnpm 9）其内部依赖提升算法（Hoisting）、peerDependencies 的自动安装策略存在重大变更，导致解析出的 node_modules 结构截然不同。
+2. 镜像源数据延迟同步：不同 Registry（如 npm 官方源、淘宝镜像源、企业私有源）对于新版本的同步时间存在延迟，若本地与 CI 配置的 \`.npmrc\` 不同，会导致解析失败或拉到过时版本。
+3. 锁文件未严格执行：若本地修改了 package.json 但未提交最新的 lockfile，或者 CI 运行时未强制要求使用 frozen-lockfile 安装，会导致两端解析图谱产生实质性分裂。`),
+        judgment('package.json 中写了 ^1.2.0，就能保证所有机器永远安装 1.2.0。', 1, `💡 它解决了什么问题：
+解决了对 SemVer 语义化版本范围规范的认知误区。如果误认为 \`^\` 字符能锁定版本，会使得开发人员忽略 lockfile 的提交与维护，导致下游依赖悄无声息地升级到含有 Bug 的小版本或补丁包。
+
+🔍 核心原理解析（防拷打）：
+1. SemVer 匹配规则：\`^1.2.0\` 代表的版本区间为 \`[1.2.0, 2.0.0)\`，包管理器在没有 lockfile 约束时，会自动向 Registry 查询符合此区间的最新的、稳定的发布版本（例如 1.9.0）。
+2. 声明与状态的分离：package.json 表达的是一种“意图声明（Intent Declaration）”，指明了项目对依赖版本的要求范围；而 lockfile 则是“状态快照（State Snapshot）”，只有后者才能确保所有环境均安装同一物理版本的包。
+3. 边界场景（Monorepo workspace 协议）：在 pnpm-workspace 架构下，若使用本地子包引用（如 \`workspace:^\`），发布时会被转换为具体的远程 SemVer 区间，如果消费端没有 lockfile，仍会发生版本漂移。`),
+        single('组件库把 React 放入 peerDependencies 的主要原因是？', ['避免宿主出现多份 React 或版本冲突', '让 CSS 自动隔离', '减少 HTML 文件', '提升 DNS 命中率'], 0, `💡 它解决了什么问题：
+解决了底层组件库在被打包和消费时引起的“宿主环境多实例问题”。如果在组件库的 dependencies 中声明宿主框架（如 React/Vue），会导致消费端应用中安装了多套运行时副本，引发 React Hooks 状态丢失、Context 隔离断裂、打包体积暴涨等工程灾害。
+
+🔍 核心原理解析（防拷打）：
+1. 依赖提升扁平化失效：若组件库的 dependencies 声明了 react 且版本与主应用不完全兼容，包管理器会在组件库的局部 node_modules 下安装新版 React，破坏其 Singleton 模式。
+2. peerDependencies 强提示约束：它明确向宿主系统声明：“本组件库需要运行在 React 环境下，但我自己不提供这个依赖，请在宿主中确保安装它，且满足声明的版本范围。”
+3. 现代包管理器表现差异：在 npm 7+ 中，默认会自动安装 peerDependencies。但在 pnpm 模式下，默认不会自动安装，若没有宿主依赖会报 Peer Dependency Conflict 警告，这强力保障了依赖的唯一实例。`),
+        multiple('CI 中更稳的依赖安装策略包括？', ['提交 lockfile', '使用 frozen install', '固定包管理器版本', '每次自动升级所有依赖'], [0, 1, 2], `💡 它解决了什么问题：
+解决了持续集成流水线中，由于网络波动、依赖自动升级、临时解析策略变动带来的流水线不可靠和不可预测性。
+
+🔍 核心原理解析（防拷打）：
+1. Frozen Lockfile 机制：CI 执行 \`pnpm install --frozen-lockfile\`（或 \`npm ci\`、\`yarn install --immutable\`）时，如果发现 package.json 和 lockfile 不一致，直接抛错退出，而不是自动静默更新 lockfile。这能完全避免 CI 阶段产生任何隐式的物理版本变化。
+2. 包管理器运行时固定：通过在 package.json 中配置 \`packageManager\` 字段（如 \`"packageManager": "pnpm@9.15.0"\`）并结合 Node.js 的 \`Corepack\` 机制，强制 CI 使用相同版本的包管理器。
+3. 缓存关联：CI 流水线通常会对依赖进行缓存。使用 lockfile 的 md5/sha256 hash 作为缓存 key，只有当 lockfile 发生变化时才更新 CI 依赖缓存，既保证了可复现性，又缩短了构建链路时长。`),
+        single('install scripts 的风险更接近什么？', ['安装阶段执行第三方代码，可能影响构建 and 安全', '只能修改字体', '只能删除图片', '不会影响任何结果'], 0, `💡 它解决了什么问题：
+解决了前端工程化链路中的“供应链安全隐患（Supply Chain Security Risk）”。若不加防护地执行依赖包在安装阶段自动运行的生命周期脚本（如 postinstall），会使得恶意包在本地或 CI 服务器执行越权操作、窃取环境变量或注入恶意后门。
+
+🔍 核心原理解析（防拷打）：
+1. 生命周期脚本劫持：npm/pnpm 在解析安装包时，会自动检测其 package.json 中的 \`preinstall\`、\`install\`、\`postinstall\` 脚本并使用 shell 执行。这常被黑客利用进行“投毒”（如窃取 \`.env\` 中的密钥并发送至收集服务器）。
+2. 沙箱逃逸与执行权限：由于大部分开发者在本地或 CI 执行安装时使用的是无沙箱的主机环境，这些脚本可以读取 system 文件、环境变量、修改系统 host 或发起网络连接。
+3. 安全防御策略与取舍：大厂通常推荐使用 \`--ignore-scripts\` 阻断生命周期脚本。但会导致需要本地编译底层 native 模块依赖（如 esbuild、node-sass）无法正常工作，需要通过配置 \`trustedDependencies\` 或 patch 包管理（如 \`pnpm patch\`）进行细粒度授权。`),
       ],
     }),
     makeLongformDoc({
@@ -147,12 +183,48 @@ export default {
         { title: 'Vite HMR API', url: 'https://cn.vitejs.dev/guide/api-hmr' },
       ],
       quiz: [
-        single('dev proxy 最大的认知风险是？', ['掩盖真实跨域、Cookie 和网关行为', '让 HTML 不能渲染', '让 CSS 无法加载', '让 JS 不能执行'], 0, '代理让本地联调方便，但可能隐藏真实链路差异。'),
-        multiple('本地正常线上登录态异常，应检查？', ['Cookie Domain', 'SameSite/Secure', '真实 Origin', '按钮颜色'], [0, 1, 2], '登录态常受 Cookie 和跨源策略影响。'),
-        judgment('只要 dev server 代理请求成功，就说明线上请求链路一定没问题。', 1, '线上还会经过真实域名、HTTPS、CDN、网关和 Cookie 策略。'),
-        single('SPA 刷新子路由 404 通常和什么有关？', ['history fallback 未正确配置', '数组方法不可用', 'React 版本太新', '图片尺寸太大'], 0, 'SPA 子路由刷新需要服务端或 CDN 回退到入口 HTML。'),
-        multiple('dev server 常见职责包括？', ['服务源码模块', 'HMR', '静态资源', '替代生产监控'], [0, 1, 2], '生产监控不是 dev server 的职责。'),
-        single('changeOrigin 会影响什么？', ['转发请求时 Host/Origin 相关语义', 'TypeScript 类型推导', 'DOM 节点数量', '图片压缩率'], 0, 'changeOrigin 会改变代理请求头，可能与真实浏览器请求不同。'),
+        single('dev proxy 最大的认知风险是？', ['掩盖真实跨域、Cookie 和网关行为', '让 HTML 不能渲染', '让 CSS 无法加载', '让 JS 不能执行'], 0, `💡 它解决了什么问题：
+解决了开发环境便利度与真实生产链路不一致导致的“带病上线”风险。如果过度依赖 dev server 的本地代理来绕过浏览器同源策略，会掩盖 Cookie 的 SameSite、Secure 限制，以及生产网关的跨域阻碍。
+
+🔍 核心原理解析（防拷打）：
+1. 同源策略规避的本地幻觉：dev proxy 实际上是在本地 dev server 侧通过 Node.js（使用 http-proxy 等）发起中转。因为同源策略（SOP）只作用于浏览器与服务器之间，服务器与服务器之间的通信不受此限制，从而完全绕过了浏览器的 CORS 拦截。
+2. Cookie 校验机制失效：真实场景下，跨域请求携带 Cookie 受到 Domain、Path 和现代浏览器 Strict/Lax SameSite 机制的严格限制。通过 proxy 转发后，浏览器认为请求目标仍是本地开发机的 localhost，故而能顺利携带本地 Cookie，但在上线部署为不同域名后，这些凭证往往无法携带或发送，导致登录态丢失。
+3. 生产链路追问：线上通常需要经过 CDN、WAF（Web 应用防火墙）、Nginx 反向代理、BFF 以及最终 the 微服务网关。dev proxy 的配置仅属于一种便捷的“伪联调方案方案”，上线前必须在具备相同网关路由和 HTTPS 安全凭证的 Staging/UAT 环境进行实测。`),
+        multiple('本地正常线上登录态异常，应检查？', ['Cookie Domain', 'SameSite/Secure', '真实 Origin', '按钮颜色'], [0, 1, 2], `💡 它解决了什么问题：
+解决了由于 Cookie 安全模型和跨源资源共享（CORS）规范在本地开发和生产环境的环境差异，导致用户登录态丢失、状态写入失败的排查痛点。
+
+🔍 核心原理解析（防拷打）：
+1. Cookie Domain 与 Path 约束：Cookie 的 Domain 属性决定了哪些域名可以写入和读取。如果本地通过代理将其写在 \`localhost\`，但线上使用了二级子域名，且没有正确设置 Domain 为主域名（例如 \`.company.com\`），会导致子域名间无法共享 Cookie 凭证。
+2. SameSite 与 Secure 属性：现代浏览器为了防范 CSRF 攻击，默认将 SameSite 设为 \`Lax\`。若请求为跨站，Cookie 不会被发送，必须设置 \`SameSite=None; Secure\`。然而，\`Secure\` 属性要求整个通信信道必须是 HTTPS。本地开发多为非加密的 HTTP，往往忽略了此约束。
+3. Origin & CORS 验证：BFF 或网关通常对 \`Origin\` 头进行严格的安全白名单核验。dev proxy 在代理转发时可能会修改 Origin（如未配置 \`changeOrigin: true\`，或配置后破坏了后端的校验逻辑），而生产中真实的 Origin 与后端允许的 CORS 白名单不一致，就会直接造成凭证写入失败。`),
+        judgment('只要 dev server 代理请求成功，就说明线上请求链路一定没问题。', 1, `💡 它解决了什么问题：
+解决了开发者在联调阶段因“代理成功”产生的盲目自信。若忽视本地代理与线上 CDN、Web 服务端（如 Nginx、网关）在路由转发、跨域配置、HTTPS 握手和鉴权机制上的实质差异，会导致上线即崩溃的重大生产事故。
+
+🔍 核心原理解析（防拷打）：
+1. 物理网络拓扑差异：本地代理是单机转发，直接访问后端 IP 或开发环境域名；生产环境的请求会依次经过 DNS 解析、CDN 缓存、网关限流、WAF 防护、以及反向代理负载均衡。每一个节点都可能因为 Headers 大小限制、超时时间、Keep-Alive 策略等导致请求失败。
+2. 网关重写与路由不一致：在 dev server 中配置的 \`rewrite\` 规则（如把 \`/api\` 去掉）是纯前端构建工具的逻辑。若生产环境的 Nginx 或 API 网关没有同步配置等价的路径重写规则，会导致接口返回 404 或者是网关层路由异常。
+3. HTTPS 阻断与协议问题：开发机通常跑在 HTTP 协议下，生产环境则全量强制 HTTPS。许多关于 Mixed Content（混合内容安全警告，即 HTTPS 页面发起 HTTP 接口请求）的问题，以及 http2 多路复用在开发期的表现，都无法在简单的 dev server 中显现。`),
+        single('SPA 刷新子路由 404 通常和什么有关？', ['history fallback 未正确配置', '数组方法不可用', 'React 版本太新', '图片尺寸太大'], 0, `💡 它解决了什么问题：
+解决了单页面应用（SPA）采用 HTML5 History 路由模式时，页面刷新或直接输入子路径 URL 导致页面加载失败（报 404）的架构缺陷。
+
+🔍 核心原理解析（防拷打）：
+1. History 路由的工作原理：SPA 的 History 路由（如使用 \`history.pushState\`）是在前端通过 JS 操纵浏览器历史记录栈来更新页面 URL，此时浏览器并未向服务器发起真实的 HTTP Get 请求。
+2. 资源请求的回退机制（Fallback）：当用户在浏览器中刷新 \`/dashboard/users\`，浏览器会向服务器发起针对该具体子路径的物理资源请求。物理文件 \`index.html\` 存在于根目录，不存在该子路径对应的静态目录，若无后端干预，就会直接返回 404。
+3. 大厂面试追问（工程配置取舍）：在本地开发时，Vite/Webpack 通过 \`connect-history-api-fallback\` 中间件拦截所有未命中静态资源的 GET 请求，并重定向到主 \`index.html\`。但在生产环境，必须由 Nginx 配置 \`try_files $uri $uri/ /index.html\`，或在 CDN、BFF 网关配置对非静态资源路径的通用回退，才能确保刷新不报 404。`),
+        multiple('dev server 常见职责包括？', ['服务源码模块', 'HMR', '静态资源', '替代生产监控'], [0, 1, 2], `💡 它解决了什么问题：
+解决了本地开发流中反馈效率低下的问题。通过向前端开发者提供近乎实时的模块按需编译服务、热替换链路以及静态文件代理，极大地缩短了从编写代码到页面更新的反馈回路。
+
+🔍 核心原理解析（防拷打）：
+1. 源码编译与转换（Transform 流）：在开发期，dev server 作为 HTTP 服务器拦截所有的 JS/TS/CSS 请求，利用内置编译链（如 Vite 使用 esbuild，Webpack 使用 loader）将这些源文件动态转换为浏览器可读取 of 规范格式（例如把 SFC 转化为标准的 ESM）。
+2. 实时模块图维护与 HMR 链路：server 维护着整个运行态的模块依赖图谱（Module Graph）。当文件发生修改，server 使用文件监听（如 chokidar）捕获变更，计算出最小更新边界，通过 Websocket 向浏览器推送热替换信号，避免昂贵的全页刷新。
+3. 宿主静态服务与 fallback：提供类似 nginx 的功能，托管开发所需的 public 静态资源，并在配置了 HTML5 History 路由时，作为 fallback 中间件拦截 404 请求，重定向到主入口。`),
+        single('changeOrigin 会影响什么？', ['转发请求时 Host/Origin 相关语义', 'TypeScript 类型推导', 'DOM 节点数量', '图片压缩率'], 0, `💡 它解决了什么问题：
+解决了本地开发代理向后端转发请求时，后端服务器因 Host 头部校验不匹配或 Origin 不合规而拒绝服务的问题。
+
+🔍 核心原理解析（防拷打）：
+1. Host 请求头的篡改与伪装：默认情况下，当浏览器请求 \`localhost:3000/api\` 并通过代理转发到 \`backend.com\` 时，如果不配置 \`changeOrigin: true\`，转发给后端的 Host 头依然是 \`localhost:3000\`。部分后端框架或安全网关会校验 Host 是否与自身域名一致，若不一致则直接拒绝访问。配置后，代理会将 Host 改写为目标域名 \`backend.com\`。
+2. Origin 与 CORS 的联动关系：在跨域请求中，浏览器会自动附带 \`Origin: http://localhost:3000\`。虽然 Host 被改写了，但通常 \`Origin\` 头不会被 changeOrigin 强制抹除，这有利于后端做精细化的 CORS 跨源白名单校验。
+3. 边界场景与 Cookie 篡改：仅仅修改 Host 往往不够。如果后端接口在响应头中下发了 \`Set-Cookie\`，且其 \`Domain\` 属性限制为 \`.backend.com\`，浏览器仍会拒绝写入本地的 \`localhost\`。此时通常还需要配合 \`cookieDomainRewrite\` 属性，在代理层拦截响应，将 Set-Cookie 中的 Domain 属性动态改写为 \`localhost\` 或 \`127.0.0.1\`。`),
       ],
     }),
     makeLongformDoc({
@@ -219,12 +291,48 @@ export default defineConfig({
         { title: 'Rollup：Output Options 配置', url: 'https://cn.rollupjs.org/configuration-options/#output-chunkfilenames' },
       ],
       quiz: [
-        single('Vite dev 和 build 最大的差异是？', ['dev 按需服务源码，build 生成生产产物', 'dev 不运行 JS', 'build 不处理依赖', '两者完全一样'], 0, '开发期和生产期目标不同，链路也不同。'),
-        multiple('生产白屏且 chunk 404，应检查？', ['base 配置', '部署子路径', 'CDN 缓存', '动态导入产物'], [0, 1, 2, 3], 'chunk 404 常来自路径、缓存和部署一致性问题。'),
-        judgment('本地 vite dev 正常，就可以证明生产构建一定安全。', 1, '必须跑 build/preview 或类生产环境验证。'),
-        single('import.meta.env 的重要风险是？', ['构建期注入到前端产物，不能放真正密钥', '只能用于 CSS', '会阻止 HMR', '无法在 Vite 中使用'], 0, '前端产物可被用户读取。'),
-        multiple('构建阶段通常会做？', ['代码分割', '压缩', '资源 hash', 'HMR 局部更新'], [0, 1, 2], 'HMR 是开发阶段能力。'),
-        single('依赖中使用 Node-only API 导致线上失败，属于哪类问题？', ['浏览器产物兼容性问题', '设计稿问题', '数据库索引问题', 'Cookie 过期问题'], 0, '浏览器包不能直接使用 Node-only API。'),
+        single('Vite dev 和 build 最大的差异是？', ['dev 按需服务源码，build 生成生产产物', 'dev 不运行 JS', 'build 不处理依赖', '两者完全一样'], 0, `💡 它解决了什么问题：
+解决了在保证极快开发反馈速度的同时，如何确保线上生产包具备最高运行性能与最小体积的工程冲突。开发期如果引入打包，会导致庞大项目的等待时间以分钟计，而生产包若不打包，会导致千百个 ESM 文件引发网络请求瀑布流堵塞浏览器。
+
+🔍 核心原理解析（防拷打）：
+1. 开发期（No-Bundler + Native ESM）：Vite 在开发环境无需将代码合并打包，而是直接利用现代浏览器的 ESM 模块加载能力。浏览器解析到 \`import\` 时自动向 Vite 发起网络请求，Vite 只针对当前请求的文件进行即时转换（On-demand compilation），从而做到反馈速度与项目总体积解耦。
+2. 生产期（Bundler + Rollup）：生产构建时，为了极大地减少 HTTP 往返时间（RTT）和加载开销，仍然需要对代码进行物理合并。Vite 选用 Rollup 进行打包，经历复杂的依赖分析、代码混淆压缩、CSS 提取、Tree Shaking 以及 Polyfill 注入等静态流水线。
+3. 双链路架构的潜在隐患：例如某些第三方包含有非标准 ESM 导出（如只支持 CJS 的包），在开发期通过 esbuild 的依赖预构建（Pre-bundling）做了格式转换，但在生产构建时由 Rollup 插件处理却可能因为解析配置不同而报错。因此，开发后期使用 \`vite preview\` 进行模拟构建预测试至关重要。`),
+        multiple('生产白屏且 chunk 404，应检查？', ['base 配置', '部署子路径', 'CDN 缓存', '动态导入产物'], [0, 1, 2, 3], `💡 它解决了什么问题：
+解决了前端应用在发布上线后，因静态资源路径解析错误或缓存失效，导致线上应用完全无法加载（白屏）的致命故障。
+
+🔍 核心原理解析（防拷打）：
+1. 公共路径（Base/PublicPath）机制：\`base\` 属性决定了打包后 HTML 内部引入 JS/CSS 文件的绝对或相对路径起点。若应用部署在子路径（例如 \`https://site.com/app/\`），而 base 依然配为默认的 \`/\`，浏览器会向根路径 \`https://site.com/assets/...\` 发起请求，从而直接触发 404。
+2. Chunk 缓存哈希与部署漂移：当新版本发布时，由于代码变更，生成的 chunk 文件 hash 会改变。如果用户在发布瞬间访问了旧的 HTML，或者静态服务器/CDN 没有同步清理 HTML 的强缓存，HTML 会继续尝试加载已经在线上被删除 of 旧 chunk，最终导致 chunk 404 进而引发白屏。
+3. 路由降级与运行时捕获：现代单页应用在路由动态导入失败时，可以通过注册 \`window.addEventListener('error', ...)\`，或者配置路由器的 \`onError\` 回调，捕获到加载失败的 chunk 404 异常，并强制全量刷新页面以获取最新的 HTML，实现优雅的防白屏灾备。`),
+        judgment('本地 vite dev 正常，就可以证明生产构建一定安全。', 1, `💡 它解决了什么问题：
+打破了对本地开发环境的过度信任。由于开发期与生产期的编译器、打包器、执行环境和代码转换规则存在巨大差异，本地测试通过并不能规避线上白屏、打包崩塌或兼容性报错。
+
+🔍 核心原理解析（防拷打）：
+1. 工具链的分裂（esbuild vs Rollup）：开发期，Vite 在底层利用 Go 编写的 \`esbuild\` 快速进行依赖解析与模块转换；而生产期，Vite 选用 \`Rollup\` 进行打包。两者的 AST 解析器、对非标准 CJS/ESM 混用模块的容错度存在差异，导致有些代码在 esbuild 下能通过，在 Rollup 中却直接抛出语法或构建解析错误。
+2. 环境变量静态替换差异：\`import.meta.env\` 中的变量在开发期是通过运行时注入对象提供，但在生产打包时，Rollup 插件会采用类似 DefinePlugin 的 AST 静态字符串替换。如果代码中存在动态插值引用环境变量，生产构建时可能直接退化为 \`undefined\` 或语法报错。
+3. CSS 注入与压缩细节：开发期 CSS 通常是以 \`<style>\` 标签形式通过 JS 动态注入到 DOM 中以支持快速 HMR，而生产期 Rollup 会使用 \`cssCodeSplit\` 将样式物理抽取为独立的 \`.css\` 文件。这会导致组件样式的加载顺序、样式覆盖优先级（CSS Order）在开发期和生产期截然不同，从而产生线上样式错乱。`),
+        single('import.meta.env 的重要风险是？', ['构建期注入到前端产物，不能放真正密钥', '只能用于 CSS', '会阻止 HMR', '无法在 Vite 中使用'], 0, `💡 它解决了什么问题：
+解决了前端工程化中的“敏感密钥泄露（Secrets Leakage）”安全漏洞。如果把敏感 API Key、数据库密码、内网凭证等直接通过 Vite 环境变量导入前端代码，打包后这些数据会以明文形式暴露在 JS 产物中。
+
+🔍 核心原理解析（防拷打）：
+1. 构建期静态求值与字符串替换：Vite 提供的 \`import.meta.env.VITE_XXX\` 并非是在浏览器运行时动态读取服务器操作系统的 \`process.env\`，而是在编译构建阶段由打包器读取本地系统的环境变量，并对源码中的 AST 节点进行硬编码替换。
+2. 产物体积与明文暴露：替换后的 JS 代码最终会输出为类似于 \`const API_KEY = "sk_prod_12345"\` 的静态字符串。即便代码经过混淆、压缩，或者放置在条件分支中，攻击者只需下载该前端包并全局搜索关键字，即可秒级提取出敏感凭证。
+3. 安全边界设计：在安全的工程设计中，前端应用只能访问不敏感的公有变量（通常带有 \`VITE_\` 前缀作为过滤标记）。若需要依赖敏感密钥进行接口交互，应当通过 BFF（Backend For Frontend）进行中转鉴权，或者在容器部署阶段通过动态挂载的 \`config.json\` 或 SSR 运行时代替，从而避免将密钥打包进静态产物。`),
+        multiple('构建阶段通常会做？', ['代码分割', '压缩', '资源 hash', 'HMR 局部更新'], [0, 1, 2], `💡 它解决了什么问题：
+解决了原始源码文件体积过大、网络传输效率低下、缓存无法有效控制以及加载耗时过长等影响生产性能的核心痛点。
+
+🔍 核心原理解析（防拷打）：
+1. 代码分割（Code Splitting）减小首屏开销：通过分析模块拓扑图，将应用划分为多个物理 Bundle（如公共依赖 vendor.js、异步导入路由模块 page.js）。这使浏览器能够并发下载资源，并且只加载当前路由所需的最小代码子集。
+2. 资源 Hash 驱动精确缓存：在输出文件名中注入基于文件内容计算的 hash 值。当文件内容未变时，hash 保持一致，浏览器可强制读取本地强缓存；一旦代码更新，hash 变更，立即可突破缓存获取最新资源。
+3. 压缩精简产物体积：借助压缩工具进行死代码删除（DCE）、变量与函数名极简化混淆（Mangle）、常量折叠以及冗余空白符剔除，将 JS/CSS 的传输大小缩减至原代码的 20%~40%。`),
+        single('依赖中使用 Node-only API 导致线上失败，属于哪类问题？', ['浏览器产物兼容性问题', '设计稿问题', '数据库索引问题', 'Cookie 过期问题'], 0, `💡 它解决了什么问题：
+解决了由于运行时（Runtime）环境隔离不彻底，误将面向 Node.js 服务端设计的 API（如 \`fs\`、\`path\`、\`process\`）打包进前端浏览器代码，导致线上运行时报 \`process is not defined\` 等崩溃问题。
+
+🔍 核心原理解析（防拷打）：
+1. 运行时 API 孤岛与差异：Node.js 拥有系统级 API（如文件系统、操作系统、网络套接字等），而浏览器端是在严格防沙箱的安全容器中运行，仅提供 DOM、BOM 及标准 Web API（如 fetch、crypto）。
+2. 开发期 Mock 幻觉：很多历史悠久的 npm 包是为 Node.js 编写的，或者在底层对 Node API 有弱依赖。在本地开发时，Vite 的依赖预构建或部分 Node-polyfill 插件可能悄悄在内存中模拟了这些 API，使得本地运行时不会报错。但在生产构建中，如果 Rollup 未配置 polyfill 或者是宿主环境彻底去除了模拟，就会直接报错。
+3. 彻底根治与排除：针对此类依赖，应当在构建配置中通过 \`resolve.alias\` 将特定的 Node 模块重定向到空对象（如 \`path-browserify\` 或空垫片文件），或者在 package.json 的 \`browser\` 字段声明替换逻辑。更优雅的做法是，在选型第三方库时，严格审查其 target 属性是否包含 browser。`),
       ],
     }),
     makeLongformDoc({
@@ -297,12 +405,48 @@ export default defineConfig({
         { title: 'npm peerDependencies 说明', url: 'https://docs.npmjs.com/cli/v10/configuring-npm/package-json#peerdependencies' },
       ],
       quiz: [
-        single('组件库 public API 的核心价值是？', ['给消费方稳定契约', '隐藏所有代码', '替代测试', '删除类型系统'], 0, 'public API 是消费者可依赖的边界。'),
-        multiple('组件库产物设计要关注？', ['exports', 'types', 'peerDependencies', 'sideEffects'], [0, 1, 2, 3], '这些共同决定解析、类型、依赖和 tree shaking。'),
-        judgment('业务项目大量导入组件库内部路径是稳定做法。', 1, '内部路径不是公开契约，库重构会破坏业务。'),
-        single('React 组件库把 React 打进 dependencies 的风险是？', ['可能出现多份 React 实例', '无法写 CSS', '接口不能请求', 'HTML 不能解析'], 0, '框架多实例会造成 Hooks、Context 等异常。'),
-        multiple('组件库升级治理应包含？', ['语义化版本', '变更日志', '迁移指南', '静默破坏性变更'], [0, 1, 2], '破坏性变更需要明确声明和迁移路径。'),
-        single('sideEffects 配置错误最可能导致？', ['样式被误摇掉或无用代码无法摇掉', '数据库死锁', 'Cookie 失效', 'DNS 解析失败'], 0, 'sideEffects 直接影响构建器的摇树判断。'),
+        single('组件库 public API 的核心价值是？', ['给消费方稳定契约', '隐藏所有代码', '替代测试', '删除类型系统'], 0, `💡 它解决了什么问题：
+解决了组件库随着业务迭代频繁重构内部实现时，导致消费端项目由于强耦合库内私有文件而大面积崩塌（Breaking Changes 扩散）的问题。
+
+🔍 核心原理解析（防拷打）：
+1. 💡 黑盒化与信息隐藏：组件库应当隐藏内部目录结构（如组件的辅助函数、底层的原子组件等），只通过统一 of 入口文件（如 \`index.ts\`）导出明确支持和承诺长期稳定的公共 API（如组件 Props 定义、特定工具函数等）。
+2. 🔍 演进自由度与向后兼容：一旦确立了 public API 契约，库开发者可以在不通知消费者的情况下，完全重写库的内部逻辑、重命名私有文件夹，只要导出的 API 签名和语义不变，消费端在无感升级时就不会出现编译报错。
+3. ⚡ 构建器摇树优化的通道：清晰的 public API 也是构建工具进行依赖图追踪的根节点。如果业务方绕过公共入口，直接去引入内部私有文件路径，不仅破坏了封装，也让构建器在做模块依赖去重和 tree shaking 时无从下手。`),
+        multiple('组件库产物设计要关注？', ['exports', 'types', 'peerDependencies', 'sideEffects'], [0, 1, 2, 3], `💡 它解决了什么问题：
+解决了公共组件库在被不同宿主环境（CJS/ESM 项目、TypeScript 项目、不同框架版本）消费时，出现的无法加载、类型失效、包体积失控、双包危机或多框架实例冲突等工程灾难。
+
+🔍 核心原理解析（防拷打）：
+1. 💡 条件导出（Exports Map）的多入口解析：在 package.json 中配置 \`exports\` 字段，不仅指明了类型的指向，还能根据宿主环境（\`import\` 用于 ESM，\`require\` 用于 CommonJS）定向加载最适合的编译产物，防止传统 main/module 声明在混合模式下的混淆。
+2. 🔍 无残留摇树（sideEffects 标记）：显式配置 \`"sideEffects": false\`，告知打包器该组件库中的 JS 文件均无副作用，若消费端未使用某些组件，可以直接从最终产物中剔除。
+3. ⚡ 单例保障（peerDependencies）：声明对基础框架（如 react、vue）的版本要求，避免重复打包 React 运行时，确保状态管理器和 UI 框架的单例性。`),
+        judgment('业务项目大量导入组件库内部路径是稳定做法。', 1, `💡 它解决了什么问题：
+避免了业务项目过度耦合第三方或内部组件库的内部具体实现结构，防止组件库小版本迭代重构时，业务代码因为物理路径变更而发生编译级报错。
+
+🔍 核心原理解析（防拷打）：
+1. 💡 物理路径非契约保障：组件库的内部路径（如 \`lib/es/components/button/button.js\`）往往是构建产物阶段由工具链动态生成的中间体，属于“实现细节”，并不在库的版本兼容承诺内。
+2. 🔍 现代 Exports 条件封锁：在现代 package.json 规范中，如果组件库正确声明了 \`exports\` 字段，且只导出了 \`.\` 和 \`./css\` 等主入口，任何尝试引入内部路径的行为，都会在 Node.js 解析或构建打包时被强制阻断。
+3. ⚡ 安全升级治理：应当通过组件库的 Public 入口进行聚合导入。若某些子模块确实有独立按需引入需求，组件库开发者应通过 exports 明确对外暴露，以维持契约的清晰性。`),
+        single('React 组件库把 React 打进 dependencies 的风险是？', ['可能出现多份 React 实例', '无法写 CSS', '接口不能请求', 'HTML 不能解析'], 0, `💡 它解决了什么问题：
+解决了由于组件库依赖声明失当引入的多实例危机。这会直接导致业务运行时出现“Hooks can only be called inside the body of a function component”报错、React Context 上下文跨组件丢失、以及打包产物体积重复累加等致命痛点。
+
+🔍 核心原理解析（防拷打）：
+1. 💡 物理隔离与实例重叠：当库的 package.json 错误地将 react 列在 dependencies 中，如果主应用 and 该组件库对 React 版本的要求不一致，包管理器会在组件库的 node_modules 内物理安装另一份 React 代码。
+2. 🔍 React 全局上下文的分裂：React 依赖内部的全局变量（如 currentDispatcher）来定位当前正在执行的组件上下文以支撑 Hooks 工作。当两个不同的 React 实例在同一个页面中交替执行，全局调度器就会发生错乱，直接抛出 Hooks 报错。
+3. ⚡ 单实例强制约束：对于此类核心运行时框架，组件库必须将其声明在 peerDependencies 中。宿主应用在安装时会负责提供唯一的 React 实例。如果本地开发联调时因为软链导致仍存在双实例，必须在主应用的构建配置中配置 \`resolve.alias\`，强制将 \`react\` 指向主应用 node_modules 下的唯一物理路径。`),
+        multiple('组件库升级治理应包含？', ['语义化版本', '变更日志', '迁移指南', '静默破坏性变更'], [0, 1, 2], `💡 它解决了什么问题：
+解决了内部或公共组件库在版本迭代升级时，因信息不对称、变更范围模糊导致消费端项目不敢升级、或者升级后产生未知回归缺陷的“版本升级焦虑”与协同壁垒。
+
+🔍 核心原理解析（防拷打）：
+1. 💡 语义化版本（SemVer）的严苛遵循：严格按照 \`Major.Minor.Patch\` 规律递增。涉及到公开 API 的废弃必须递增 Major，新增功能递增 Minor，修复 Bug 且无破坏性变更递增 Patch，从而建立可预测的契约关系。
+2. 🔍 自动化变更日志与语义 commit：利用 \`conventional-changelog\` 和 Husky + commitlint 等工具，强制使用 \`feat/fix/chore/docs\` 等提交前缀，并在发布时自动基于 Git Commit 历史生成精确的 Changelog，明确告知消费者本次升级改动了什么。
+3. ⚡ 迁移指南与 Codemod：在大厂大型组件库的升级实践中，当面临重大破坏性变更时，仅仅写一份迁移文档并不够，通常需要开发配套的 Codemod 工具（基于 AST 的自动代码转换脚本，例如使用 \`jscodeshift\`），帮助消费端业务团队一键自动重构旧代码中不兼容的 API，极大地降低升级成本与故障率。`),
+        single('sideEffects 配置错误最可能导致？', ['样式被误摇掉或无用代码无法摇掉', '数据库死锁', 'Cookie 失效', 'DNS 解析失败'], 0, `💡 它解决了什么问题：
+解决了前端构建优化中 Tree Shaking（摇树优化）的过度剪枝与死代码残留问题。若错误地将包含全局副作用的代码（如全局样式 CSS 导入、Polyfill）配置为无副作用，会导致页面样式完全丢失或基础环境环境功能失效。
+
+🔍 核心原理解析（防拷打）：
+1. 💡 Tree Shaking 的保守假设：打包工具在遇到未被显式引用的模块时，由于无法在编译期确定其是否在全局产生了影响，默认不敢将其删除。
+2. 🔍 sideEffects 声明的干预机制：若在 package.json 中配置 \`"sideEffects": false\`，即对打包器做出“安全承诺”：该库中的所有文件，如果没有被业务代码显式 import 引用，就可以被 100% 摇掉。这通常能显著减少打包体积。
+3. ⚡ 样式与全局逻辑的吞噬边界：当我们在组件中引入 \`import './style.css'\`，对打包器而言，这个 CSS 模块并没有任何导出的变量被 JS 使用。如果 \`sideEffects\` 被错误地设置为 \`false\`且没有额外排除该样式，打包工具会认为该 CSS 模块完全无用，在生产构建阶段会将其直接移除，造成页面样式彻底白屏。因此，正确的配置应当为 \`"sideEffects": ["*.css", "*.scss"]\`，以确保 JS 被安全 Tree Shake 的同时，样式被正确保留。`),
       ],
     }),
   ],

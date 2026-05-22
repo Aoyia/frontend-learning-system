@@ -545,7 +545,7 @@ html[data-immersive="true"] .md-body { font-size: 16px; line-height: 2; }
 }
 .quiz-explain.show { display: block; }
 .quiz-explain strong { color: var(--text); }
-.quiz-explain-text { margin-top: 6px; }
+.quiz-explain-text { margin-top: 6px; white-space: pre-wrap; }
 .recommended-reading {
   margin-top: 10px;
   padding-top: 10px;

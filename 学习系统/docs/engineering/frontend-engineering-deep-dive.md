@@ -232,12 +232,12 @@ D. Node.js 不支持 Tree Shaking
 解析：Tree Shaking 依赖 ESM 的静态分析能力（import/export 是关键字，编译期可确定），CommonJS 的 require 是普通函数，调用时机在运行时，无法静态推断。
 
 ### Q3 [judgment]
-将 `@babel/preset-env` 的 `modules` 选项设为 `commonjs` 会破坏 Tree Shaking。
+在 Babel 编译与前端构建打包优化中，将 `@babel/preset-env` 的 `modules` 选项设为 `commonjs` 会破坏 Tree Shaking。
 答案：对
 解析：该选项会将 ESM 的 import/export 转为 CommonJS 的 require/module.exports，使打包工具无法进行静态分析，从而无法 Tree Shake。
 
 ### Q4 [multiple]
-以下哪些场景会导致 Tree Shaking 失效？
+在使用 Webpack 或 Rollup 等打包工具时，以下哪些场景会导致 Tree Shaking（摇树优化）失效？
 A. 库的 package.json 中未设置 `sideEffects: false`
 B. 使用动态 require() 加载模块
 C. 使用具名 import（import { fn } from 'lib'）
@@ -255,7 +255,7 @@ D. Vite 把 HMR 逻辑放在了 Service Worker 中
 解析：Webpack 的 HMR 需要重建受影响的整个 chunk；Vite 基于 ESM 模块边界，只编译变化的文件即可，速度与项目大小无关。
 
 ### Q6 [multiple]
-在 Vue 单文件组件（SFC）的 HMR 中，以下哪些说法正确？
+在 Vue 单文件组件（SFC）配合 Vite 的 HMR（模块热替换）运行机制中，以下哪些说法是正确的？
 A. 只修改 `<style>` 不会触发组件重新挂载，状态保留
 B. 修改 `<template>` 会触发 render 函数更新，状态保留
 C. 修改 `<script setup>` 通常会导致组件重新挂载，状态丢失
@@ -273,7 +273,7 @@ D. 删除未使用的依赖包
 解析：pnpm 的全局 store 使用内容寻址存储，每个包只存一份，各项目通过硬链接引用，可节省大量磁盘空间。
 
 ### Q8 [judgment]
-代码分割粒度越细越好，每个组件单独一个 chunk 可以最大化按需加载效率。
+在前端构建打包与性能优化中，代码分割粒度越细越好，每个组件单独一个 chunk 可以最大化按需加载效率。
 答案：错
 解析：过细的分割会导致大量 HTTP 请求，且 HTTP/2 也有并发和 HPACK 开销的上限；合理的分割粒度应该是路由级别 + 第三方库 vendor 合并。
 
@@ -319,7 +319,7 @@ D. 必须手动在 vite.config.js 配置 manualChunks
 解析：按需引入的核心是 ESM + Tree Shaking（A、C），自动导入插件（B）则是开发体验优化。D 不是必须的。
 
 ### Q14 [single]
-以下 Webpack 配置项中，哪个最直接影响 Tree Shaking 效果？
+在 Webpack 配置中，以下哪个选项最直接影响 Tree Shaking 效果？
 A. `optimization.minimize`
 B. `optimization.usedExports` 配合 `mode: production`
 C. `output.filename`
@@ -328,7 +328,7 @@ D. `resolve.alias`
 解析：`usedExports: true` 告诉 Webpack 标记哪些导出被使用，配合 Terser 压缩时才真正删除未使用代码。mode: production 默认开启此选项。
 
 ### Q15 [judgment]
-Monorepo 中的公共包每次修改都需要发布到 npm 才能被其他包使用。
+在基于 pnpm/yarn 的 Monorepo（单仓多包）多项目关联结构中，公共包每次本地修改都需要发布到 npm 才能被其他子包消费和使用。
 答案：错
 解析：Monorepo 的核心价值之一就是本地引用（pnpm 的 `workspace:*` 协议），包修改后其他包立即可见，无需发布。发布只在对外发布时才需要。
 

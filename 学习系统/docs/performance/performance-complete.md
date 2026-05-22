@@ -293,7 +293,7 @@ D. 给图片加 `loading="lazy"` 实现懒加载
 解析：D 错误，对 LCP 图片加懒加载会延迟加载，反而使 LCP 更慢。LCP 图片应该优先加载，使用 fetchpriority="high"。
 
 ### Q3 [judgment]
-设置 `Cache-Control: max-age=31536000, immutable` 适合用在文件名带有 hash 的静态资源上。
+在 Web 缓存优化中，设置 `Cache-Control: max-age=31536000, immutable` 适合用在文件名带有 hash 的静态资源上。
 答案：对
 解析：带 hash 的文件内容不变则 URL 不变（命中缓存），内容变了 hash 也变（URL 变化，不命中旧缓存），因此可以放心设置超长缓存。
 
@@ -325,7 +325,7 @@ D. 在页面底部加载第三方脚本
 解析：图片未设置尺寸时，浏览器无法预留空间，图片加载后会导致下方内容突然下移，是 CLS 最常见来源。
 
 ### Q7 [judgment]
-`requestAnimationFrame` 比 `setTimeout(fn, 0)` 更适合做动画，因为它保证在浏览器下次渲染前执行。
+在前端动画与渲染优化中，`requestAnimationFrame` 比 `setTimeout(fn, 0)` 更适合执行动画逻辑，因为它保证在浏览器下次渲染绘制前执行。
 答案：对
 解析：rAF 与浏览器的渲染节奏（通常 60fps/16.7ms）同步，不会出现多次修改只渲染一次或跳帧的问题；setTimeout(0) 的执行时机不稳定。
 
@@ -348,7 +348,7 @@ D. 将所有列表项放入 DocumentFragment 后一次性插入
 解析：Web Worker 无法直接操作 DOM（B错）；will-change 对 10 万个节点无效；DocumentFragment 一次插入后仍然有 10 万个 DOM 节点。只有虚拟列表从根本上解决了 DOM 节点数量问题。
 
 ### Q10 [judgment]
-对 LCP 图片添加 `loading="lazy"` 可以提升页面性能。
+在前端性能优化中，对首屏可见的 LCP（最大内容渲染）核心图片添加 `loading="lazy"` 延迟加载可以提升页面性能。
 答案：错
 解析：loading="lazy" 会延迟加载折叠线以下的图片，但 LCP 图片通常在首屏可见，懒加载会推迟其加载，直接导致 LCP 分数下降。
 
@@ -371,7 +371,7 @@ D. 可以在客户端实时压缩上传的文件
 解析：Brotli 使用更复杂的压缩算法，产物通常比 gzip 小 15~25%；但压缩速度较慢，通常在构建时预压缩（或 CDN 实时压缩）。
 
 ### Q13 [judgment]
-使用 SSR（服务端渲染）一定能提升 LCP。
+在前端首屏渲染与性能优化中，使用 SSR（服务端渲染）一定能提升 LCP（最大内容渲染）性能。
 答案：错
 解析：SSR 可以减少白屏时间（TTFB 后 HTML 已包含内容），有助于 LCP；但如果服务器响应慢（TTFB 高），SSR 反而会拖慢 LCP。SSR 并不是银弹。
 

@@ -417,7 +417,7 @@ defineAsyncComponent 是 Vue 3 提供的异步组件包装 API，它把一个返
 ## 📝 面试题自测
 
 ### Q1 [single]
-`defineAsyncComponent(() => import('./Foo.vue'))` 最核心的收益是什么？
+在 Vue 3 中使用 `defineAsyncComponent(() => import('./Foo.vue'))` 语法定义异步组件，最核心的性能优化收益是什么？
 A. 让组件变成全局组件
 B. 让组件在真正渲染时再加载对应异步 chunk
 C. 让组件 props 自动校验
@@ -426,7 +426,7 @@ D. 让组件跳过响应式更新
 解析：异步组件包装器会在组件实际渲染时调用 loader，动态 import 会成为构建工具的切包点。
 
 ### Q2 [single]
-异步组件的真实 JS chunk 主要由谁生成？
+在使用 `defineAsyncComponent` 时，将组件代码分割并最终输出为独立异步 JS chunk 的过程主要由谁负责完成？
 A. Vue 的运行时
 B. 浏览器 DOM API
 C. Vite / Webpack / Rollup 等构建工具
@@ -435,12 +435,12 @@ D. Vue Router
 解析：Vue 负责包装和调度 loader，动态 import 的代码分割由构建工具完成。
 
 ### Q3 [judgment]
-调用 `defineAsyncComponent` 时，真实组件文件一定会立刻被下载。
+【判断题】在 Vue 3 应用中，只要在 JavaScript 代码里调用了 `defineAsyncComponent(...)`，对应的真实组件文件（如组件的 JS/Vue chunk）就一定会立刻被浏览器下载。
 答案：错
 解析：它只创建异步组件包装器，通常在组件第一次渲染时才执行 loader 并触发下载。
 
 ### Q4 [multiple]
-`defineAsyncComponent` 的高级配置通常可以处理哪些状态？
+在 Vue 3 的 `defineAsyncComponent` 高级选项配置中，通常可以处理和配置哪些组件状态或选项？
 A. loadingComponent
 B. errorComponent
 C. delay
@@ -449,7 +449,7 @@ D. timeout
 解析：官方 API 支持加载态、错误态、loading 延迟和超时控制。
 
 ### Q5 [single]
-如果网络很快，为什么 loading 默认有 delay？
+在 Vue 3 的异步组件设计中，如果客户端网络环境极快，异步组件的 loadingComponent 默认设置了 `delay` 延迟显示时间（例如 200ms），其主要原因是什么？
 A. 避免 loading 组件一闪而过造成闪烁
 B. 为了让 chunk 更大
 C. 为了禁止错误重试
@@ -458,7 +458,7 @@ D. 为了让 SSR 失效
 解析：默认延迟能避免很短加载过程产生不必要的 loading 闪烁。
 
 ### Q6 [multiple]
-排查异步组件加载失败时，应该优先检查哪些点？
+在前端项目中排查异步组件因网络、构建或逻辑异常导致加载失败的问题时，开发人员应该优先检查哪些关键路径？
 A. chunk 请求是否 404 或被缓存策略影响
 B. loader Promise 是否 reject
 C. errorComponent / onError 是否吞掉异常
@@ -467,12 +467,12 @@ D. CSS scoped 是否开启
 解析：异步组件失败通常和 chunk 请求、Promise 状态、错误处理有关，和 scoped CSS 无直接关系。
 
 ### Q7 [judgment]
-异步组件包装器会把 props 和 slots 透传给内部真实组件。
+【判断题】在 Vue 3 中，`defineAsyncComponent` 返回的异步组件壳子（AsyncComponentWrapper）在底层渲染时，会自动将接收到的 props 和 slots 完整地透传给内部解析成功的真实组件。
 答案：对
 解析：官方文档说明异步包装组件可以无缝替换原组件使用，会向内部组件传递 props 和 slots。
 
 ### Q8 [single]
-在 SSR 场景下，Vue 3.5+ 异步组件新增的 lazy hydration 策略主要解决什么问题？
+在服务端渲染 (SSR) 场景下，Vue 3.5+ 为异步组件新增的延迟水合 (lazy hydration) 策略（如 `hydrate: hydrateOnVisible()`）主要解决了什么问题？
 A. 控制组件什么时候在客户端水合
 B. 删除所有服务端 HTML
 C. 禁止动态 import

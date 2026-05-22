@@ -279,7 +279,7 @@ state.c = 30
 ## 📝 面试题自测
 
 ### Q1 [single]
-以下代码，`state.a = 10; state.b = 20; state.c = 30` 三次赋值会触发几次 effect（不含初始化）？
+在 Vue 3 响应式系统中，对于没有自定义调度器（scheduler）的裸 effect，连续执行 `state.a = 10; state.b = 20; state.c = 30` 三次赋值会触发几次 effect 执行（不包含首次注册初始化）？
 A. 1 次（合并执行）
 B. 2 次
 C. 3 次
@@ -288,7 +288,7 @@ D. 0 次（Vue 自动批处理）
 解析：裸 effect（没有传 scheduler）每次依赖变化都会同步直接执行，3 次赋值触发 3 次，不存在自动合并。
 
 ### Q2 [single]
-包含初始化执行，以上代码总共输出几次？
+在上题所描述的无调度器裸 effect 代码中，包含首次注册的初始化执行，总共会输出几次？
 A. 3
 B. 4
 C. 6
@@ -297,7 +297,7 @@ D. 1
 解析：effect 注册时立即执行一次（输出 6），随后 3 次赋值各触发一次（15、33、60），共 4 次。
 
 ### Q3 [judgment]
-Vue3 组件的 RenderEffect 和裸 effect 一样，依赖变化时都会立即同步执行更新。
+在 Vue 3 中，组件的渲染 effect（RenderEffect）与没有调度器的普通裸 effect 一样，其所依赖的响应式数据变化时都会立即同步执行更新。
 答案：错
 解析：组件 RenderEffect 的 ReactiveEffect 上挂了 scheduler，依赖变化时调用 scheduler → queueJob → 进入微任务队列去重执行，不是立即同步运行。
 
@@ -311,7 +311,7 @@ D. 所有 effect 包括裸 effect 天生都会合并执行
 解析：D 错误，合并执行是 RenderEffect 的 scheduler 机制赋予的，裸 effect 默认无 scheduler，不会自动合并。
 
 ### Q5 [single]
-想让裸 effect 实现合并执行，核心需要传入什么参数？
+在 Vue 3 中，若想让一个裸 effect 实现类似组件渲染那样的多次赋值合并为一次执行（批处理），在创建 ReactiveEffect 时核心需要传入什么参数？
 A. lazy: true
 B. scheduler 函数，配合任务队列和微任务 flush
 C. deep: true
@@ -352,12 +352,12 @@ D. 控制 effect 的执行优先级
 解析：当第一个 job 入队时将 isFlushing 设为 true，并创建一个 Promise.then 等待执行。后续同轮的 job 入队时发现 isFlushing 已为 true，不再重复创建新的微任务，避免 flush 函数被调用多次。
 
 ### Q10 [judgment]
-裸 effect 在传入 scheduler 后，初始化时依然会执行一次（同步）。
+在 Vue 3 响应式系统中，即便为 ReactiveEffect 传入了自定义的调度器 `scheduler`，该 effect 在首次注册初始化时依然会同步立即执行一次。
 答案：对
 解析：scheduler 只影响"依赖变化后的重新执行"时机，不影响 effect 注册时的首次执行。首次执行始终是同步的，用于完成依赖收集。
 
 ### Q11 [single]
-在手写的 queueJob + flush 方案中，连续赋值 state.a = 10; state.b = 20; state.c = 30 后，最终额外输出几次？
+在手写 Vue 3 的异步调度队列 `queueJob` + `flush` 机制中，对于关联了调度器的 effect，连续赋值 `state.a = 10; state.b = 20; state.c = 30` 后，最终额外会触发几次输出？
 A. 3 次（15、33、60）
 B. 2 次
 C. 1 次（60）
@@ -366,7 +366,7 @@ D. 0 次（全部合并取消）
 解析：3 次赋值都调用了 scheduler → queueJob，但 runner 同一个引用在 Set 里只存一份，最终 flush 时只执行一次，输出最终值 60。
 
 ### Q12 [multiple]
-关于 RenderEffect 和裸 effect 的区别，以下哪些是正确的？
+在 Vue 3 中，关于组件渲染 effect（RenderEffect）与无调度器的裸 effect 之间的区别，以下哪些是正确的？
 A. 裸 effect 同步执行，适合调试和追踪精确的响应时机
 B. RenderEffect 通过 scheduler 延迟执行，适合合并多次数据变更后统一更新视图
 C. 两者底层都使用 ReactiveEffect，本质上是同一套响应式机制

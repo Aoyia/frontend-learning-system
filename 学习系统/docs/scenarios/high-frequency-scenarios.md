@@ -402,16 +402,16 @@ class LRUCache {
 ## 📝 面试题自测
 
 ### Q1 [single]
-防抖（Debounce）最适合的使用场景是？
+在前端交互开发中，防抖（Debounce）最适合的使用场景是？
 A. 页面滚动位置同步（需要实时更新）
 B. 搜索框输入联想（停止输入后才发请求）
 C. 按钮防重复点击（立即执行且有间隔）
 D. 鼠标移动轨迹记录
 答案：B
-解析：防抖是"停止触发后延迟执行"，适合搜索框等场景。滚动/鼠标移动适合节流。按钮防重复点击可以用节流或 loading 状态控制。
+解析：防抖的核心逻辑是"在事件被触发 n 秒后再执行回调，如果在这 n 秒内又被触发，则重新计时"，非常适合搜索框输入联想等用户输入停止后再进行处理的场景。
 
 ### Q2 [single]
-`Promise.all` 和 `Promise.allSettled` 最关键的区别是？
+在 JavaScript 异步编程中，`Promise.all` 和 `Promise.allSettled` 最关键的区别是？
 A. all 更快，allSettled 更准确
 B. all 任一 rejected 就整体 rejected；allSettled 等所有完成，每个结果都有 status 字段
 C. allSettled 不支持 async/await
@@ -420,12 +420,12 @@ D. all 只接受 Promise 数组，allSettled 也接受普通值
 解析：Promise.all 失败快（fail-fast）；Promise.allSettled 等所有 Promise 完成（无论成功/失败），返回 [{status: 'fulfilled', value}, {status: 'rejected', reason}] 格式。
 
 ### Q3 [judgment]
-深克隆中使用 `WeakMap` 缓存处理过的对象，是为了防止栈溢出。
+在手写 JavaScript 深拷贝（深克隆）函数时，使用 `WeakMap` 记录已拷贝对象是为了防止函数调用栈溢出。
 答案：错
 解析：WeakMap 缓存的目的是处理**循环引用**（A 引用 B，B 又引用 A）。防止栈溢出需要改用迭代代替递归，或限制递归深度。WeakMap 使用弱引用，不影响 GC。
 
 ### Q4 [multiple]
-实现 `EventEmitter.once()` 的关键点有哪些？
+在手写 JavaScript 发布订阅模式中的 `EventEmitter.once()` 监听器时，有哪些关键实现点？
 A. 使用 wrapper 函数包裹原始监听器
 B. 在 wrapper 执行完原始监听器后，调用 off 移除 wrapper 自身
 C. 在 wrapper 上挂载 `_original` 属性，保存原始函数引用，以便 off 时匹配
@@ -434,7 +434,7 @@ D. 必须使用 Symbol 作为事件名
 解析：once 的实现要点：包裹一层 wrapper（A），触发后自动解绑（B），为了支持 `emitter.off(event, originalFn)` 还需要能从 wrapper 找到原始函数（C）。D 不是必需的。
 
 ### Q5 [single]
-虚拟列表的核心性能收益来自哪里？
+在前端长列表渲染性能优化中，虚拟列表（Virtual List）的核心收益来自哪里？
 A. 减少了 JavaScript 计算量
 B. 使用了 CSS GPU 加速
 C. 将 DOM 节点数量控制在固定范围内（视口内），不随数据量增长
@@ -443,12 +443,12 @@ D. 使用了 Web Worker 在后台渲染
 解析：虚拟列表的本质是"只渲染看得见的 DOM"，无论数据有 1000 条还是 100 万条，DOM 节点数始终只有约 20-50 个，因此渲染和操作开销是 O(1) 而不是 O(n)。
 
 ### Q6 [judgment]
-`Promise.race()` 中，如果最快完成的 Promise 是 rejected，则 race 的结果就是 rejected。
+在 JavaScript 的 `Promise.race()` 竞态机制中，如果最快完成的 Promise 是 rejected，则整体 race 的结果就是 rejected。
 答案：对
 解析：Promise.race 以第一个 settle（无论 fulfilled 还是 rejected）的 Promise 决定结果。最快的 reject 了，race 就 reject。
 
 ### Q7 [single]
-LRU 缓存使用 `Map` 实现的关键是利用了 Map 的什么特性？
+在 JavaScript 中手写实现 LRU（最近最少使用）缓存时，使用 `Map` 替代普通 Object 的关键优势是利用了 Map 的什么特性？
 A. Map 的键可以是任意类型
 B. Map 的迭代顺序与插入顺序一致，可以通过 keys().next().value 获取最久未使用的键
 C. Map 比 Object 占用更少内存
@@ -457,7 +457,7 @@ D. Map 的 get/set 操作时间复杂度是 O(log n)
 解析：LRU 通过"先删后插"刷新访问顺序，Map 的插入序迭代特性使得 `map.keys().next().value` 始终是最早插入（最久未访问）的键，完美实现 LRU 的淘汰逻辑。
 
 ### Q8 [multiple]
-关于并发控制（Concurrency Limit），以下哪些说法正确？
+在 JavaScript 异步并发控制（如限制网络请求最大并发数）中，以下哪些说法是正确的？
 A. 核心思路是维护一个"任务池"，池满时等待最先完成的任务
 B. 使用 `Promise.race(pool)` 可以等待池中最先完成的任务
 C. 并发控制可以防止同时发出过多网络请求导致服务器压力过大
@@ -466,7 +466,7 @@ D. 并发数越大，总耗时一定越短
 解析：D 错误，并发数超过服务器连接限制后，反而会因为排队或失败降低效率。合理的并发数（如 3-5）往往是最优的。
 
 ### Q9 [single]
-前端 RBAC（基于角色的访问控制）模型中，权限分配给谁？
+在前端权限控制架构中，典型的 RBAC（基于角色的访问控制）模型里权限被分配给谁？
 A. 直接分配给每个用户
 B. 分配给角色，用户通过角色间接获得权限
 C. 分配给接口 URL
@@ -475,12 +475,12 @@ D. 分配给前端路由路径
 解析：RBAC 的核心是"用户→角色→权限"三层模型。将权限分配给角色而非用户，当需要调整权限时只需修改角色配置，而不用逐个修改数百个用户。
 
 ### Q10 [judgment]
-`v-permission` 指令通过 CSS `display: none` 隐藏无权限元素是最佳实践。
+在 Vue 的权限管理实践中，自定义指令 `v-permission` 通过 CSS `display: none` 隐藏无权限元素被视为最佳安全实践。
 答案：错
 解析：CSS 隐藏的 DOM 元素仍然存在于页面中，用户可以通过 DevTools 或修改 CSS 看到/显示它们；更安全的做法是在 mounted 钩子中用 `el.parentNode.removeChild(el)` 直接移除 DOM 节点。
 
 ### Q11 [single]
-以下深克隆方案中，哪种方案无法克隆函数和 undefined 值？
+在 JavaScript 的各种深拷贝（深克隆）方案中，哪种常用方案完全无法克隆函数和 undefined 值？
 A. 手写递归深克隆
 B. `JSON.parse(JSON.stringify(obj))`
 C. `structuredClone(obj)`
@@ -489,7 +489,7 @@ D. lodash 的 `_.cloneDeep`
 解析：JSON 序列化会丢失 undefined、函数、Symbol、循环引用会报错，RegExp/Date 会被转为字符串。structuredClone 支持循环引用但不支持函数，手写和 lodash 支持最全面。
 
 ### Q12 [multiple]
-以下哪些是实现搜索框自动补全需要考虑的问题？
+在开发前端搜索框自动补全（Autocomplete）联动功能时，以下哪些是必须考虑和处理的问题？
 A. 使用防抖减少请求频率
 B. 处理竞态条件（后发的请求先返回覆盖了正确结果）
 C. 使用节流保证实时响应
@@ -498,7 +498,7 @@ D. 取消上一次未完成的请求（AbortController）
 解析：C 错误，节流会在停止输入时跳过最后一次，不适合搜索；防抖（A）才合适。竞态（B）和取消请求（D）是必须处理的问题。
 
 ### Q13 [single]
-实现一个支持 `cancel()` 方法的防抖函数，cancel 的作用是？
+在手写实现一个支持 `cancel()` 注销方法的防抖函数时，该 `cancel` 函数的核心作用是？
 A. 清除当前计时器，阻止待执行的函数运行
 B. 立即执行待执行的函数
 C. 将防抖延迟重置为默认值
@@ -507,12 +507,12 @@ D. 取消事件监听
 解析：cancel 用于主动取消还未执行的防抖任务（如组件卸载时），防止内存泄漏或在已销毁的组件上执行回调。
 
 ### Q14 [judgment]
-`Promise.allSettled` 返回的 Promise 本身不会 reject，总是 fulfill。
+在 JavaScript 中，`Promise.allSettled` 返回的 Promise 本身永远不会被 reject，而是总是走向 fulfilled。
 答案：对
 解析：allSettled 等所有 Promise settle 后，以包含所有结果对象的数组 resolve，不会因为个别 Promise 的 rejection 而整体 reject。
 
 ### Q15 [multiple]
-深克隆中，需要特殊处理哪些类型以确保正确克隆？
+在手写 JavaScript 深拷贝（深克隆）函数时，需要特殊处理哪些引用类型以确保正确克隆而不是丢失其原型或属性？
 A. Date 对象（new Date(value) 重建）
 B. RegExp 对象（new RegExp(value) 重建）
 C. Map 和 Set（递归克隆每个键值）
@@ -521,7 +521,7 @@ D. null（视为普通对象递归）
 解析：D 错误，null 的 typeof 是 'object' 但它不是对象，需要在最开始判断 `value === null` 直接返回。Date/RegExp/Map/Set 都需要用各自的构造函数重建才能正确克隆。
 
 ### Q16 [single]
-以下哪种方式实现"首次立即执行，之后节流"的效果？
+在手写 JavaScript 节流（Throttle）函数时，以下哪种常见方式能实现“首次调用立即执行，之后按间隔节流”的效果？
 A. 普通节流（时间戳版）
 B. 普通防抖
 C. 防抖的 `immediate: true` 模式

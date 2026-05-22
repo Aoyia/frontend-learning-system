@@ -821,7 +821,7 @@ Vue3 编译器的设计具有高度的模块化和可扩展性，通过插件机
 ## 📝 面试题自测
 
 ### Q1 [single]
-Vue3 模板编译的三个核心阶段顺序是？
+在 Vue 3 的模板编译（Compiler）机制中，编译器处理模板并生成渲染函数的三个核心阶段的执行顺序是？
 A. Transform → Parse → Generate
 B. Parse → Generate → Transform
 C. Parse → Transform → Generate
@@ -830,7 +830,7 @@ D. Generate → Transform → Parse
 解析：固定顺序：Parse（模板字符串 → AST）→ Transform（优化转换 AST，生成 codegenNode）→ Generate（AST → 渲染函数代码字符串）。
 
 ### Q2 [multiple]
-以下关于 Parse 阶段的描述，哪些正确？
+在 Vue 3 模板编译的 Parse 阶段（解析阶段），以下关于其工作原理和 AST 的描述中哪些是正确的？
 A. Parse 阶段使用 Tokenizer 进行词法分析，将模板拆分为 Token 序列
 B. Parse 阶段的产物是抽象语法树（AST）
 C. Parse 阶段直接生成可执行的 render 函数
@@ -839,7 +839,7 @@ D. `baseParse` 最终调用 `createRoot` 返回根节点
 解析：C 错误，Parse 只生成 AST，render 函数是 Generate 阶段的产物。
 
 ### Q3 [single]
-Transform 阶段的核心产物是什么？
+在 Vue 3 模板编译的 Transform 阶段（转换阶段），其核心产物是什么？
 A. 最终的 render 函数字符串
 B. 带有 `codegenNode` 属性的优化 AST
 C. 经过 Minify 压缩的代码
@@ -848,12 +848,12 @@ D. 虚拟 DOM 节点
 解析：Transform 在原始 AST 每个节点上附加 codegenNode（代码生成节点），包含静态提升信息、PatchFlag 等，供 Generate 阶段使用。
 
 ### Q4 [judgment]
-`app.mount()` 时，如果组件没有 render 函数和 template 选项，Vue 会报错。
+【判断题】在 Vue 3 中，调用 `app.mount()` 挂载应用时，如果根组件既没有提供渲染函数 `render` 也没有提供 `template` 模板选项，Vue 在任何运行模式下都会直接抛出致命错误。
 答案：错
 解析：Vue 会用 `container.innerHTML` 作为模板，通过运行时编译器将其编译为 render 函数，然后再挂载。
 
 ### Q5 [multiple]
-静态提升（Static Hoisting）优化的核心是什么？
+在 Vue 3 模板编译优化中，静态提升（Static Hoisting）的核心价值和运作机制是什么？
 A. 将不依赖响应式数据的静态节点提升到渲染函数外部，只创建一次
 B. 被提升的节点的 PatchFlag 值为 -1（HOISTED）
 C. 每次重新渲染时跳过静态节点的 diff
@@ -862,7 +862,7 @@ D. 静态提升只对文本节点有效，不对元素节点有效
 解析：D 错误，静态提升对静态元素节点同样有效。被提升的节点在 _hoisted_xxx 变量中只创建一次，重新渲染时复用。
 
 ### Q6 [single]
-PatchFlag 值为 `1` 代表什么？
+在 Vue 3 的编译优化和 PatchFlag 机制中，当 VNode 的 PatchFlag 值为二进制 `1` (即 `PatchFlags.TEXT`) 时，代表该节点包含什么类型的动态绑定？
 A. 动态 class
 B. 动态文本内容（TEXT）
 C. 动态样式
@@ -871,7 +871,7 @@ D. 需要完整 diff
 解析：PatchFlag 是编译期标记：1 = TEXT（动态文本），2 = CLASS，4 = STYLE，8 = PROPS，-1 = HOISTED（静态提升），-2 = BAIL（退出优化）。
 
 ### Q7 [multiple]
-Block Tree 的优化作用包括哪些？
+在 Vue 3 渲染引擎和编译优化中，Block Tree 的引入起到了哪些核心的优化作用？
 A. 跟踪 Block 内部所有动态子节点，存放在 dynamicChildren 数组中
 B. diff 时可以直接遍历 dynamicChildren，跳过静态节点的比较
 C. 减少虚拟 DOM 的比较范围，从树级 diff 降低为靶向 diff
@@ -880,7 +880,7 @@ D. Block Tree 使 v-for 和 v-if 内部的节点永远不需要 diff
 解析：D 错误，v-for 和 v-if 涉及结构变化（节点增删），仍需要完整 diff 处理其内部变化，它们会产生新的 Block。
 
 ### Q8 [single]
-`setupRenderEffect` 函数的核心职责是什么？
+在 Vue 3 的组件挂载和运行时更新流程中，组件实例方法 `setupRenderEffect` 的核心职责是什么？
 A. 编译模板为 AST
 B. 初始化组件的 props 和 slots
 C. 创建响应式的 ReactiveEffect，建立组件更新与响应式数据之间的联系
@@ -889,12 +889,12 @@ D. 将 VNode 转换为真实 DOM
 解析：setupRenderEffect 创建以 componentUpdateFn 为 fn 的 ReactiveEffect，首次执行时完成依赖收集，之后数据变化通过 scheduler → queueJob 触发更新。
 
 ### Q9 [judgment]
-Vue3 在生产构建时（通过 Vite/Webpack），模板编译发生在浏览器运行时。
+【判断题】在 Vue 3 生产环境构建时（如配合 Vite 或 Webpack 使用 SFC），模板的解析与编译通常是在浏览器运行时（Runtime）中进行的。
 答案：错
 解析：推荐（也是默认）模式是构建时编译（编译器只在构建工具中运行），打包产物只包含运行时（runtime-core），不包含编译器，体积更小，启动更快。
 
 ### Q10 [single]
-`compileToFunction` 中 `new Function('Vue', code)(runtimeDom)` 这行代码的作用是？
+在 Vue 3 运行时编译器 `compileToFunction` 的底层实现中，使用 `new Function('Vue', code)(runtimeDom)` 这行代码的主要作用是？
 A. 创建一个 Web Worker 执行编译代码
 B. 将 generate 产出的代码字符串动态创建为可执行函数
 C. 将 AST 序列化为 JSON
@@ -903,7 +903,7 @@ D. 注册全局组件
 解析：generate 输出的是字符串形式的函数体，通过 `new Function` 将字符串转为真正的函数对象，并传入 runtimeDom 作为 Vue 运行时依赖，这是运行时编译的最后一步。
 
 ### Q11 [multiple]
-以下哪些是 Transform 阶段处理的内容？
+在 Vue 3 模板编译的 Transform 阶段中，编译器主要处理了以下哪些转换工作？
 A. 处理 v-if、v-for 等结构性指令，转为对应的代码生成节点
 B. 对静态节点进行标记，为 hoistStatic 做准备
 C. 将模板字符串切分为 Token
@@ -912,7 +912,7 @@ D. 处理 v-model、v-on 等指令，生成对应的 props
 解析：C 是 Parse 阶段（Tokenizer）的工作，不属于 Transform。
 
 ### Q12 [single]
-以下哪个调用链描述了 Vue3 运行时编译的正确路径？
+关于 Vue 3 从模板字符串到渲染函数的运行时编译过程，以下哪个调用链准确描述了其核心路径？
 A. compileToFunction → baseCompile → baseParse + transform + generate
 B. baseCompile → compileToFunction → baseParse
 C. baseParse → compileToFunction → generate
@@ -921,12 +921,12 @@ D. transform → baseParse → generate → compileToFunction
 解析：完整调用链：compileToFunction（缓存层）→ compile（平台适配层）→ baseCompile（核心层）→ baseParse + transform + generate（三阶段）。
 
 ### Q13 [judgment]
-Transform 阶段的 NodeTransform 和 DirectiveTransform 是同一类转换器，可以互换使用。
+【判断题】在 Vue 3 模板编译的 Transform 阶段中，NodeTransform（节点转换器）和 DirectiveTransform（指令转换器）属于同一类转换器，在编写自定义编译插件时可以无缝互换使用。
 答案：错
 解析：两者职责不同。NodeTransform 处理元素、文本等节点类型；DirectiveTransform 专门处理 v-model、v-on、v-bind 等指令，返回该指令对应的 props 信息。
 
 ### Q14 [multiple]
-关于 createApp → mount 的整体流程，以下哪些正确？
+关于 Vue 3 挂载应用从 `createApp` 初始化到首屏 `mount` 的整体渲染流程，以下哪些描述是正确的？
 A. createApp 内部调用 ensureRenderer()，懒创建渲染器（只创建一次）
 B. app.mount 内部调用 createVNode 创建根 VNode，再调用 render 渲染
 C. mountComponent → setupComponent → setupRenderEffect 是组件挂载的核心调用链
@@ -935,7 +935,7 @@ D. render 函数直接操作真实 DOM，不经过虚拟 DOM
 解析：D 错误，render 函数通过 patch 将 VNode 转换为 DOM，整个过程经由虚拟 DOM diff 再更新真实 DOM。
 
 ### Q15 [single]
-Vue3 编译优化中，哪个机制让 diff 从"全树比较"变为"靶向更新"？
+在 Vue 3 的编译优化方案中，主要是通过哪个核心机制将运行时的虚拟 DOM diff 从“全树递归比较”转变为“扁平数组的靶向更新”？
 A. 静态提升
 B. PatchFlag + Block Tree（dynamicChildren 靶向 diff）
 C. v-once 指令
@@ -944,6 +944,6 @@ D. Composition API
 解析：Block Tree 让每个 Block 节点记录内部所有动态子孙节点（dynamicChildren），diff 时只需遍历这个扁平数组，直接跳过静态节点，时间复杂度从 O(n) 降到接近 O(动态节点数)。
 
 ### Q16 [judgment]
-`_createElementBlock` 和 `_createElementVNode` 创建的 VNode 是同一种类型，没有区别。
+【判断题】在 Vue 3 编译后的代码中，`_createElementBlock` 与 `_createElementVNode` 所创建的虚拟节点（VNode）在底层数据结构上完全相同，它们在运行时 diff 过程中没有区别。
 答案：错
 解析：createElementBlock 创建的是 Block VNode，会开启一个新的动态节点追踪上下文（openBlock），收集其内部的动态子节点到 dynamicChildren；createElementVNode 创建的是普通 VNode，不具备追踪能力。

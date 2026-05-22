@@ -608,7 +608,7 @@ D. 服务端渲染 hydration 问题
 解析：provide / inject 的典型场景是解决 props drilling，让祖先组件向任意深度的后代提供上下文。
 
 ### Q2 [single]
-组件实例创建时，子组件默认的 `provides` 通常是什么？
+在 Vue 3 组件实例创建时，子组件默认的 `provides` 通常是什么？
 A. 永远是一个新的空对象
 B. 父组件的 `provides`
 C. 当前组件的 `props`
@@ -617,7 +617,7 @@ D. 当前 app 的 `config.globalProperties`
 解析：子组件默认复用父组件的 provides，只有第一次调用 provide 时才创建自己的 provides。
 
 ### Q3 [single]
-某组件第一次调用 `provide` 时，Vue 为什么要执行 `Object.create(parentProvides)`？
+在 Vue 3 中，某组件第一次调用 `provide` 时，Vue 为什么要执行 `Object.create(parentProvides)`？
 A. 为了深拷贝父组件提供的所有值
 B. 为了创建自己的 provides，同时通过原型链继承父级 provides
 C. 为了把父组件 provides 清空
@@ -626,12 +626,12 @@ D. 为了让所有 inject 都变成异步
 解析：Object.create(parentProvides) 让当前组件拥有自己的 provides，又能通过原型链继续访问父级提供的数据。
 
 ### Q4 [judgment]
-Vue 3 的 `inject` 必须手动 while 遍历父组件链，才能找到祖先 provider。
+在 Vue 3 的组件树中，`inject` 必须手动 while 遍历父组件链，才能找到祖先 provider。
 答案：错
 解析：provides 对象已经通过原型链串起来，inject 通过 `key in provides` 即可触发原型链查找。
 
 ### Q5 [single]
-`inject` 查找时使用 `key in provides` 而不是 `hasOwnProperty` 的关键原因是？
+在 Vue 3 中，`inject` 查找依赖时使用 `key in provides` 而不是 `hasOwnProperty` 的关键原因是？
 A. `in` 可以沿原型链查找
 B. `in` 会自动创建默认值
 C. `in` 可以让普通值变成 ref
@@ -640,7 +640,7 @@ D. `hasOwnProperty` 不能判断字符串 key
 解析：provide / inject 的核心查找依赖原型链，`in` 会检查对象自身和原型链上的属性。
 
 ### Q6 [single]
-如果 `App` 和 `Page` 都 `provide('theme')`，`Page` 的深层后代 `inject('theme')` 会拿到哪个值？
+在 Vue 3 中，如果根组件 `App` 和中间组件 `Page` 都通过 `provide('theme')` 提供了相同键名的值，那 `Page` 的深层后代通过 `inject('theme')` 最终会拿到哪个值？
 A. App 提供的值
 B. Page 提供的值
 C. 两个值组成的数组
@@ -649,12 +649,12 @@ D. undefined
 解析：同名 provider 遵循就近原则，最近的 provider 会覆盖更上层的 provider。
 
 ### Q7 [judgment]
-`provide / inject` 本身会把普通值包装成响应式数据。
+在 Vue 3 中，`provide / inject` 本身会自动把普通值包装成响应式数据。
 答案：错
 解析：provide / inject 只是传值机制，是否响应式取决于提供的值本身是不是 ref、reactive、computed 等响应式对象。
 
 ### Q8 [single]
-如果 provider 提供的是 `ref(0)`，injector 在 `setup()` 里拿到的是什么？
+在 Vue 3 中，如果祖先组件通过 `provide` 提供的是一个 `ref(0)`，那么后代组件在 `setup()` 里通过 `inject` 拿到的是什么？
 A. 自动解包后的 number
 B. ref 对象本身
 C. 只读字符串
@@ -663,7 +663,7 @@ D. 一个 Promise
 解析：官方文档说明 ref 会按原样注入，不会自动解包，这样可以保留响应式连接。
 
 ### Q9 [multiple]
-下面哪些场景适合使用 `provide / inject`？
+在 Vue 3 开发中，下面哪些场景适合使用 `provide / inject` 进行依赖注入？
 A. 表单组件向 FormItem / Input 提供表单上下文
 B. Tabs 向 TabPane 提供 activeKey 和切换方法
 C. 普通父子组件传一个按钮文案
@@ -672,7 +672,7 @@ D. 插件提供全局服务或配置
 解析：provide / inject 适合上下文、组件库内部协作和插件能力注入；普通父子传值用 props 更清晰。
 
 ### Q10 [single]
-`app.provide()` 提供的数据最终主要存在哪里？
+在 Vue 3 中，通过全局应用实例 `app.provide()` 提供的数据最终主要存在哪里？
 A. appContext.provides
 B. window.__VUE_PROVIDES__
 C. 每个组件的 props
@@ -681,12 +681,12 @@ D. Pinia store
 解析：app.provide 会写入应用上下文的 provides，根组件和后代组件的 inject 可以从这里查到应用级依赖。
 
 ### Q11 [judgment]
-`provide()` 和 `inject()` 都依赖当前组件实例，因此应在 `setup()` 阶段同步调用。
+在 Vue 3 中，`provide()` 和 `inject()` 都依赖当前组件实例，因此应在 `setup()` 阶段同步调用。
 答案：对
 解析：二者依赖 currentInstance；setup 执行期间 Vue 才能确定当前调用属于哪个组件实例。
 
 ### Q12 [multiple]
-排查深层组件 `inject()` 得到 `undefined` 时，应该优先检查哪些点？
+在 Vue 3 开发中，排查深层组件 `inject()` 得到 `undefined` 时，应该优先检查哪些点？
 A. provider 是否位于当前组件父链上
 B. provide / inject 的 key 是否一致
 C. 是否在 setup 同步阶段调用

@@ -304,12 +304,12 @@ D. 让 computed 可以有多个返回值
 解析：version counting 使得"依赖值实际未变"的情况下，computed 不会重新执行 getter，解决了级联脏标记导致的无效计算。
 
 ### Q3 [judgment]
-向 computed 所依赖的 reactive 属性赋相同的值，computed 的 getter 一定不会重新执行。
+在 Vue 3 中，向 computed 所依赖的 reactive 属性赋相同的值，computed 的 getter 一定不会重新执行。
 答案：对
 解析：Vue 在 trigger 时会做 hasChanged 检查，值相同则不 trigger；即使标记了 DIRTY，version counting 也能阻止无效重算。
 
 ### Q4 [single]
-`queueJob` 的去重机制保证了什么？
+在 Vue 3 的调度器（Scheduler）中，`queueJob` 的去重机制保证了什么？
 A. 同一组件在一次微任务内只更新一次
 B. 不同组件按字母顺序更新
 C. 子组件一定先于父组件更新
@@ -327,7 +327,7 @@ D. nextTick 本质是 setTimeout(fn, 0) 的包装
 解析：nextTick 使用 Promise.then（微任务），不是 setTimeout（宏任务），D 错误。
 
 ### Q6 [single]
-`watch` 的 `flush: 'post'` 选项的作用是什么？
+在 Vue 3 的 watch 监听器中，`flush: 'post'` 选项的作用是什么？
 A. 让回调同步执行
 B. 在组件 DOM 更新后才执行回调，可访问最新 DOM
 C. 仅执行一次，之后自动停止
@@ -336,12 +336,12 @@ D. 让回调在 requestAnimationFrame 中执行
 解析：flush: 'post' 通过 queuePostFlushCb 将回调排在 DOM 更新之后，适合需要访问更新后 DOM 的场景。
 
 ### Q7 [judgment]
-`nextTick` 返回的 Promise 一定在当前宏任务中的所有微任务执行完后才 resolve。
+在 Vue 3 中，`nextTick` 返回的 Promise 一定在当前宏任务中的所有微任务执行完后才 resolve。
 答案：错
 解析：nextTick 挂在 currentFlushPromise 或 resolvedPromise 上，属于微任务。它在 flushJobs 完成后执行，但仍属于同一轮微任务队列，不会等到宏任务结束。
 
 ### Q8 [single]
-以下代码，`console.log` 会输出什么？
+在以下 Vue 3 代码段中，`console.log` 最终会输出什么？
 ```js
 const count = ref(0)
 const double = computed(() => count.value * 2)
@@ -356,7 +356,7 @@ D. 2（缓存了旧值）
 解析：computed 是惰性的，count.value = 5 只是标记 DIRTY，读取 double.value 时才重新执行 getter，返回 10。
 
 ### Q9 [multiple]
-`watch(source, cb, { flush: 'sync' })` 有哪些潜在问题？
+在 Vue 3 中，使用同步监听器 `watch(source, cb, { flush: 'sync' })` 可能会带来哪些潜在问题？
 A. 数据频繁变化时回调被多次同步触发，可能引发性能问题
 B. 在 cb 内部修改响应式数据可能导致无限递归
 C. 无法获取新旧值
@@ -374,12 +374,12 @@ D. 和 ref 完全相同的结构
 解析：ComputedRefImpl 实现了 Subscriber 接口（消费者角色），同时内部持有一个 dep（生产者角色），并通过 refreshComputed 实现惰性 + 缓存。
 
 ### Q11 [judgment]
-同一事件循环内连续执行 5 次 `state.count++`，组件最终只会重新渲染一次。
+在 Vue 3 中，若在同一事件循环（同一轮微任务）内连续执行 5 次响应式状态变更如 `state.count++`，组件最终只会重新渲染一次。
 答案：对
 解析：每次修改触发 queueJob，但 queueJob 的去重逻辑保证同一个渲染 job 只进队一次，flushJobs 只执行一次更新。
 
 ### Q12 [single]
-`watchEffect` 和 `watch` 的本质区别在于？
+在 Vue 3 中，`watchEffect` 和 `watch` 的本质区别在于？
 A. watchEffect 不能返回停止函数
 B. watch 需要明确指定数据源，watchEffect 在回调执行时自动追踪用到的依赖
 C. watchEffect 只能同步执行
@@ -388,7 +388,7 @@ D. watch 不支持 flush 选项
 解析：watchEffect 的 getter 就是回调本身，依赖在执行时自动收集；watch 则需要显式指定 source，回调仅在依赖变化时才触发。
 
 ### Q13 [multiple]
-以下关于 `nextTick` 的说法哪些是正确的？
+在 Vue 3 中，以下关于 `nextTick` 的说法哪些是正确的？
 A. nextTick 返回一个 Promise
 B. 在 nextTick 回调中可以访问更新后的 DOM
 C. nextTick 等同于 setTimeout(fn, 0)
@@ -397,7 +397,7 @@ D. 多个 nextTick 调用按注册顺序在同一批微任务中执行
 解析：nextTick 使用 Promise.then（微任务），C 错误；B 正确因为挂在 flushJobs 完成后；A、D 均正确。
 
 ### Q14 [single]
-computed 为什么不直接在依赖变化时同步执行 getter，而是标记 DIRTY 等待读取？
+在 Vue 3 中，`computed` 计算属性为什么不直接在依赖变化时同步执行 getter，而是先标记 DIRTY 等待下一次读取时再计算？
 A. 避免未被读取的 computed 浪费计算资源
 B. 方便序列化到 localStorage
 C. 为了兼容 SSR 环境
@@ -411,7 +411,7 @@ Vue 3 中，父组件的渲染 effect id 一定小于其子组件的渲染 effec
 解析：父组件先创建（挂载），渲染 effect 先创建，id 更小。flushJobs 按 id 升序执行，确保父先更新，子组件收到正确的 props。
 
 ### Q16 [single]
-如果在 `watch` 回调中用 `onCleanup` 注册了清理函数，该清理函数何时执行？
+在 Vue 3 中，如果在 `watch` 监听器回调中通过 `onCleanup` 注册了清理函数，该清理函数何时执行？
 A. 只在组件卸载时执行
 B. 在下一次 watch 回调执行前，或组件卸载时执行
 C. 在 nextTick 之后执行

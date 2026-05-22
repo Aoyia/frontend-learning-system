@@ -2065,7 +2065,7 @@ set -> trigger -> dep.notify -> startBatch -> 收集 subscriber -> endBatch -> s
 ## 📝 面试题自测
 
 ### Q1 [single]
-Vue 3 中 `reactive` 创建响应式对象的核心能力来自哪种机制？
+在 Vue 3 的响应式系统中，`reactive` 创建响应式对象的核心底层拦截机制是基于什么实现的？
 A. Object.defineProperty
 B. Proxy
 C. Reflect.preventExtensions
@@ -2083,12 +2083,12 @@ D. 依赖稳定时可复用已有关系以减少无效操作
 解析：3.5+ 引入了 Link 与版本计数优化，目标就是减少"全量 cleanup + 全量重建"的无效成本。
 
 ### Q3 [judgment]
-`effect` 嵌套时，如果不恢复上一个 active effect，上下文可能会错乱。
+【判断题】在 Vue 3 响应式系统中，当 `effect` 嵌套时，如果不恢复上一个活跃的 effect (active effect)，依赖收集上下文可能会出现错乱。
 答案：对
 解析：正确。嵌套执行时需要保存并恢复上一个 activeSub/activeEffect，避免依赖收集串台。
 
 ### Q4 [single]
-下面哪一项最符合 `computed` 的核心特征？
+在 Vue 3 的计算属性 `computed` 底层设计中，下面哪一项最符合其核心特征？
 A. 每次依赖变更都立即重新计算并立刻执行 getter
 B. 不缓存结果，只做透传
 C. 惰性求值并缓存，依赖变化后标记为脏
@@ -2097,7 +2097,7 @@ D. 只能用于模板中，不能在 JS 中访问
 解析：computed 典型特征是惰性 + 缓存，依赖变化先标记脏，下次读取再重新计算。
 
 ### Q5 [multiple]
-以下哪些 API/机制与"副作用生命周期管理"直接相关？
+在 Vue 3 及其核心响应式库中，以下哪些 API 或机制与副作用（Effect）的生命周期管理直接相关？
 A. effectScope
 B. scope.stop()
 C. WeakMap targetMap
@@ -2106,7 +2106,7 @@ D. watchEffect 返回的停止函数
 解析：effectScope 与 stop 能统一回收副作用；watch/watchEffect 也会返回 stop 句柄。
 
 ### Q6 [single]
-在响应式触发链路中，哪一步主要用于"合并通知，避免同轮重复触发"？
+在 Vue 3 的底层响应式触发链路中，为了合并通知并避免同轮数据变更重复触发副作用，使用的是哪种机制？
 A. track
 B. batch/startBatch/endBatch
 C. toRaw
@@ -2115,12 +2115,12 @@ D. readonly
 解析：batch 负责响应式层面的通知合并；组件更新队列则在 scheduler/queueJob 层。
 
 ### Q7 [judgment]
-`reactive` 解构后仍然天然保持响应式，不需要任何额外处理。
+【判断题】在 Vue 3 中，由 `reactive` 创建的响应式对象在被解构后仍然天然保持响应式，不需要任何额外处理。
 答案：错
 解析：错误。直接解构会丢失响应式连接，通常需要 toRefs/toRef。
 
 ### Q8 [single]
-当 effect 正在运行且不允许递归时，`notify` 的处理策略通常是？
+在 Vue 3 响应式系统中，当某个副作用 effect 正在运行且其配置为不允许递归时，再次触发 `notify` 的处理策略通常是？
 A. 立即递归再执行一次
 B. 直接跳过本次触发，避免循环
 C. 抛出致命错误
@@ -2129,7 +2129,7 @@ D. 强制进入同步队列
 解析：这类守卫用于避免 `data.count++` 这类自触发场景导致无限递归。
 
 ### Q9 [single]
-`targetMap` 采用 WeakMap 作为第一层容器，最关键的工程价值是？
+在 Vue 3 响应式系统底层的依赖存储中，`targetMap` 采用 WeakMap 作为第一层容器的核心工程价值是？
 A. 提高 JSON 序列化速度
 B. 避免 target 被强引用导致内存泄漏
 C. 让 key 只能是字符串
@@ -2138,7 +2138,7 @@ D. 提升 TypeScript 推导能力
 解析：WeakMap 不阻止 key 被 GC 回收，适合存响应式对象到依赖映射。
 
 ### Q10 [multiple]
-面试中谈 `watch` 与 `watchEffect`，哪些说法通常成立？
+关于 Vue 3 的监听器 `watch` 与副作用监听器 `watchEffect`，以下哪些说法是正确的？
 A. watch 需要明确数据源，可拿到新旧值
 B. watchEffect 会自动收集回调中用到的依赖
 C. watch 一定是同步执行，不能调度到微任务
@@ -2147,12 +2147,12 @@ D. 两者都可以返回或提供停止监听的能力
 解析：watch 可配置 flush 调度策略，并非只能同步执行。
 
 ### Q11 [judgment]
-`shallowRef` 的深层属性变化默认不会触发更新，必要时可配合 `triggerRef`。
+【判断题】在 Vue 3 中，对 `shallowRef` 的深层属性进行修改默认不会触发响应式更新，但在必要时可以配合 `triggerRef` 手动触发更新。
 答案：对
 解析：这是常见性能优化策略：追踪引用级变化，深层变更手动触发。
 
 ### Q12 [single]
-在组件嵌套渲染中，父子 render effect 的正确关系应是？
+在 Vue 3 的组件嵌套渲染场景中，父子渲染副作用 (render effect) 的正确关系和执行策略应该是？
 A. 子 effect 永远覆盖父 effect，不需要恢复
 B. 通过保存/恢复前一个 active effect 保证上下文正确
 C. 父子共享同一个 effect 实例
@@ -2161,7 +2161,7 @@ D. 父 effect 在子 effect 创建后会永久失效
 解析：嵌套 effect 的核心就是执行前保存上下文，执行后恢复。
 
 ### Q13 [single]
-以下哪个场景最适合在面试中用来说明"异步校验竞态"问题？
+在前端开发高频业务场景中，以下哪个场景最适合用来说明“异步校验竞态”（Race Conditions）问题？
 A. CSS 动画掉帧
 B. 用户名唯一性校验旧请求覆盖新输入结果
 C. 图片懒加载闪烁
@@ -2170,7 +2170,7 @@ D. 路由 Hash 变化
 解析：输入快速变化会产生并发请求，若不做序号或取消控制会出现旧结果回填。
 
 ### Q14 [multiple]
-关于 `reactive` 与 `ref` 的边界，哪些是面试高频正确点？
+关于 Vue 3 中 `reactive` 与 `ref` 的使用边界和特性，以下哪些描述是正确的？
 A. reactive 主要面向对象类型
 B. ref 可包装原始值并通过 `.value` 访问
 C. reactive 变量直接整体替换通常不会影响已有引用绑定
@@ -2179,12 +2179,12 @@ D. reactive 解构后常需 toRefs/toRef 保持响应式连接
 解析："整体替换 reactive 变量不影响视图"是常见误区。
 
 ### Q15 [judgment]
-`effectScope` 的价值之一是组件或模块销毁时集中清理多个副作用。
+【判断题】在 Vue 3 响应式高级 API 中，`effectScope` 的主要价值之一是支持在组件或自定义模块销毁时集中清理多个副作用。
 答案：对
 解析：这正是其在组件生命周期与状态库中的核心意义。
 
 ### Q16 [single]
-若面试官追问"batch 和 queueJob 的区别"，更准确的回答是？
+在 Vue 3 源码机制中，如果需要区分 `batch`（批处理合并）和 `queueJob`（异步任务队列），更准确的回答是？
 A. 两者完全等价，都是组件队列
 B. batch 在响应式通知层合并 subscriber，queueJob 在运行时调度组件更新任务
 C. batch 只用于 SSR，queueJob 只用于 CSR

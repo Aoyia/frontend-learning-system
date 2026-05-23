@@ -533,6 +533,15 @@ html[data-immersive="true"] .md-body { font-size: 16px; line-height: 2; }
 .quiz-option.selected .opt-key { background: var(--accent); color: #fff; }
 .quiz-option.correct .opt-key { background: var(--success); color: #fff; }
 .quiz-option.wrong .opt-key { background: var(--danger); color: #fff; }
+.quiz-option-content {
+  min-width: 0;
+  flex: 1;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.quiz-option-content p {
+  margin: 0;
+}
 .quiz-explain {
   margin-top: 14px;
   padding: 12px 14px;

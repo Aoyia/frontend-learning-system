@@ -558,7 +558,7 @@ function App() {
       <nav className="nav">
         <div className="nav-logo">
           <div className="nav-logo-wrapper" onClick={handleLogoPractise}>
-            <img src="/logo.png" alt="Logo" className="nav-logo-img" ref={logoImgRef} />
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="nav-logo-img" ref={logoImgRef} />
             {flyEffects.map(effect => (
               <span key={effect.id} className="logo-fly-text">{effect.text}</span>
             ))}

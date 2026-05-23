@@ -150,20 +150,15 @@ function parseDocsQuiz(markdown) {
       .replace('多选', 'multiple')
       .replace('判断', 'judgment');
 
-    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-    const answerIdx = lines.findIndex(l => l.startsWith('答案：'));
-    const explainIdx = lines.findIndex(l => l.startsWith('解析：'));
-    const contentEndIdx = [answerIdx, explainIdx].filter(i => i >= 0).sort((a, b) => a - b)[0] ?? lines.length;
-    const questionAndOptions = lines.slice(0, contentEndIdx);
-    const answerLine = answerIdx >= 0 ? lines[answerIdx] : '';
+    const explainIdx = block.indexOf('解析：');
+    const hasExplain = explainIdx !== -1;
+    const blockBeforeExplain = hasExplain ? block.slice(0, explainIdx) : block;
+    const explain = hasExplain ? block.slice(explainIdx + 3).trim() : '';
+
+    const lines = blockBeforeExplain.split('\n').map(l => l.trim()).filter(Boolean);
+    const answerLine = lines.find(l => l.startsWith('答案：'));
     const answerStr = answerLine?.replace('答案：', '').trim() || '';
-    const explain = explainIdx >= 0
-      ? lines
-        .slice(explainIdx)
-        .map((line, lineIdx) => lineIdx === 0 ? line.replace('解析：', '').trim() : line)
-        .join('\n')
-        .trim()
-      : '';
+    const questionAndOptions = lines.filter(l => !l.startsWith('答案：'));
 
     if (type === 'judgment') {
       const question = questionAndOptions.find(l => !l.startsWith('答案：') && !l.startsWith('解析：'));

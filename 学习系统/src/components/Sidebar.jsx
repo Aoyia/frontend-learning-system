@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LEARNING_CONTENT } from '../../data/learning-content.js';
 
-export function Sidebar({ currentModuleId, currentDocIdx, progressCache, onNavToDoc }) {
+export default function Sidebar({ currentModuleId, currentDocIdx, progressCache, onNavToDoc }) {
   const [openModules, setOpenModules] = useState(() => new Set([currentModuleId]));
 
   useEffect(() => {

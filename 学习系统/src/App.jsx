@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
+
 import { LEARNING_CONTENT } from '../data/learning-content.js';
 import { dbDelete, dbPut } from './storage/learnDb.js';
 import { Home } from './pages/Home.jsx';
@@ -13,8 +14,8 @@ import { DrillSelect } from './pages/DrillSelect.jsx';
 import { WrongBookPage } from './pages/WrongBookPage.jsx';
 import { QuizPage } from './pages/QuizPage.jsx';
 import { QuizResult } from './pages/QuizResult.jsx';
-import { Sidebar } from './components/Sidebar.jsx';
-import { AnswerCard } from './components/AnswerCard.jsx';
+import Sidebar from './components/Sidebar.jsx';
+import AnswerCard from './components/AnswerCard.jsx';
 import { PetWidget } from './components/PetWidget.jsx';
 import { PetPanel } from './components/PetPanel.jsx';
 import {
@@ -203,7 +204,7 @@ function App() {
     }
 
     setCurrentModuleId(moduleId);
-    setQuizState(createQuizState(type, moduleId, docIdx, orderQuestionsByType(questions)));
+    setQuizState(createQuizState(type, moduleId, docIdx, questions));
     setAnswerCardCollapsed(false);
     setMobileAnswerCardOpen(false);
   }, [db, drillStatCache, location.pathname, location.search, navigate, page, quizState, wrongBookCache]);
@@ -291,7 +292,6 @@ function App() {
     }
     startQuiz('breaker', nodeId, null, questions);
   }
-
   function startDrill(moduleId, limit = DEFAULT_DRILL_LIMIT) {
     const questions = getDrillQuestions(moduleId, drillStatCache, limit);
     if (!questions.length) {
@@ -310,7 +310,7 @@ function App() {
       showToast(moduleId ? '该模块暂无错题' : '当前没有错题');
       return;
     }
-    startQuiz('wrongbook', moduleId || 'all', null, orderQuestionsByType(questions));
+    startQuiz('wrongbook', moduleId || 'all', null, questions);
   }
 
   function startQuiz(type, moduleId, docIdx, questions, options = {}) {
@@ -322,6 +322,7 @@ function App() {
     setMobileAnswerCardOpen(false);
   }
 
+  // 移除了 flushSync 或保持局部修改，以便 toggleOption 可以流畅工作
   function toggleOption(globalIdx, optIdx) {
     setQuizState(prev => {
       const q = prev.questions[globalIdx];
@@ -394,7 +395,6 @@ function App() {
     const { currentPageIdx, pageSize, questions, type, selections } = quizState;
     const start = currentPageIdx * pageSize;
     const end = Math.min(start + pageSize, questions.length);
-    // 先执行异步副作用（必须在纯 setState 外部调用）
     for (let gi = start; gi < end; gi++) {
       const q = questions[gi];
       const selected = selections[gi];

@@ -1,5 +1,14 @@
 import { LEARNING_CONTENT } from '../../data/learning-content.js';
 
+export const QUESTION_TYPE_ORDER = {
+  single: 0,
+  multiple: 1,
+  judgment: 2,
+};
+
+export const QUICK_DRILL_LIMIT = 10;
+export const DEFAULT_DRILL_LIMIT = 20;
+
 export function isAnswerCorrect(question, selected) {
   if (Array.isArray(question.answer)) {
     return Array.isArray(selected)
@@ -26,15 +35,6 @@ export function withQuestionSource(module, doc, docIdx, question, quizIdx) {
     _quizIdx: quizIdx,
   };
 }
-
-export const QUESTION_TYPE_ORDER = {
-  single: 0,
-  multiple: 1,
-  judgment: 2,
-};
-
-export const QUICK_DRILL_LIMIT = 10;
-export const DEFAULT_DRILL_LIMIT = 20;
 
 export function orderQuestionsByType(questions) {
   return questions
@@ -135,7 +135,6 @@ export function getQuestionByQid(qid) {
   const quizIdx = Number(quizIdxText);
   return getDocQuestions(moduleId, docIdx).find(question => question._quizIdx === quizIdx) || null;
 }
-
 
 export function createQuizState(type, moduleId, docIdx, questions) {
   return {

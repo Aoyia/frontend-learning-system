@@ -1,6 +1,7 @@
+import React from 'react';
 import { isAnswerCorrect } from '../utils/quiz.js';
 
-export function AnswerCard({ quizState, collapsed, mobileOpen, onToggle, onJumpToQuestion }) {
+export default function AnswerCard({ quizState, collapsed, mobileOpen, onToggle, onJumpToQuestion }) {
   const totalQ = quizState.questions.length;
   const totalPages = Math.ceil(totalQ / quizState.pageSize);
   let correctCnt = 0;

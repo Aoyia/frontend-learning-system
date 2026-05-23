@@ -21,7 +21,7 @@ export function PetHomeCard({ petState, onOpen }) {
           <strong>{view.progress}%</strong>
         </div>
         <div className="pet-large-progress"><span style={{ width: `${view.progress}%` }} /></div>
-        <button className="mini-btn primary" onClick={onOpen}>查看进化路线</button>
+        <button className="w-fit border border-accent bg-accent text-white rounded-[7px] px-2.25 py-1.25 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:bg-primary-hover hover:border-primary-hover" onClick={onOpen}>查看进化路线</button>
       </div>
     </section>
   );

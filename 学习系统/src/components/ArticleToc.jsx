@@ -50,20 +50,27 @@ export function ArticleToc({ items }) {
     scrollTimerRef.current = window.setTimeout(() => setIsScrolling(false), 700);
   }
 
+  const tocClass = `hidden xl:block sticky top-6 max-h-[calc(100vh-104px)] overflow-y-auto pl-4 py-3 border-l border-border text-text-secondary [scrollbar-gutter:stable] [scrollbar-width:thin] ${isScrolling ? '[scrollbar-color:var(--border)_transparent]' : '[scrollbar-color:transparent_transparent]'} transition-all`;
+
   return (
-    <aside className={`article-toc ${isScrolling ? 'is-scrolling' : ''}`} aria-label="文章目录" onScroll={handleTocScroll}>
-      <div className="article-toc-title">目录</div>
-      <div className="article-toc-list">
-        {items.map(item => (
-          <button
-            key={item.id}
-            className={`article-toc-item depth-${item.depth} ${activeId === item.id ? 'active' : ''}`}
-            onClick={() => scrollToHeading(item.id)}
-            title={item.text}
-          >
-            {item.text}
-          </button>
-        ))}
+    <aside className={tocClass} aria-label="文章目录" onScroll={handleTocScroll}>
+      <div className="mb-2 text-text text-[12px] font-bold">目录</div>
+      <div className="grid gap-0.5">
+        {items.map(item => {
+          const isDepth3 = item.depth === 3;
+          const isActive = activeId === item.id;
+
+          return (
+            <button
+              key={item.id}
+              className={`w-full border-0 rounded-md bg-transparent text-text-secondary cursor-pointer text-[12px] leading-relaxed p-1.5 px-2 text-left transition-all duration-150 hover:bg-surface-alt hover:text-text ${isDepth3 ? 'pl-5 text-[11px]' : ''} ${isActive ? 'bg-primary-light text-primary font-bold' : ''}`}
+              onClick={() => scrollToHeading(item.id)}
+              title={item.text}
+            >
+              {item.text}
+            </button>
+          );
+        })}
       </div>
     </aside>
   );

@@ -72,98 +72,104 @@ export function CapabilityRoadmap({
   }
 
   return (
-    <div className="roadmap-page">
-      <section className="roadmap-hero">
+    <div className="max-w-[1180px] mx-auto grid gap-6.5">
+      <section className="flex max-md:flex-col items-end max-md:items-stretch justify-between gap-6 py-4.5 px-0 pb-2 border-b border-border">
         <div>
-          <div className="roadmap-kicker">学习方向校准</div>
-          <h1>{model.title}</h1>
-          <p>{model.subtitle}</p>
+          <div className="text-secondary text-[12px] font-bold mb-2">学习方向校准</div>
+          <h1 className="text-[30px] font-bold leading-tight mb-2.5 text-text-strong">{model.title}</h1>
+          <p className="max-w-[680px] text-text-secondary leading-relaxed text-[14px]">{model.subtitle}</p>
         </div>
-        <div className="roadmap-hero-actions">
-          <button className="btn btn-primary" onClick={onOpenBreaker}>打开技术破冰</button>
-          <button className="btn btn-outline" onClick={onOpenDrill}>小批量刷题</button>
-        </div>
-      </section>
-
-      <section className="roadmap-summary-grid">
-        <div className="roadmap-summary-card">
-          <span className="summary-label">能力维度</span>
-          <strong>{model.capabilities.length}</strong>
-          <span>按腾讯中高级前端面试拆分</span>
-        </div>
-        <div className="roadmap-summary-card">
-          <span className="summary-label">关键文档进度</span>
-          <strong>{doneDocs}/{totalDocs}</strong>
-          <span>来自当前学习系统已有内容</span>
-        </div>
-        <div className="roadmap-summary-card">
-          <span className="summary-label">错题复训</span>
-          <strong>{wrongCount}</strong>
-          <span>优先从错题最多的能力维度回补</span>
-        </div>
-        <div className="roadmap-summary-card emphasis">
-          <span className="summary-label">下一步建议</span>
-          <strong>{weakest?.capability.name || '先建立地图'}</strong>
-          <span>{weakest ? `当前完成 ${weakest.state.percent}%` : '从技术破冰开始'}</span>
+        <div className="flex gap-2.5 flex-wrap justify-end">
+          <button className="px-5 py-2 rounded-lg border-0 cursor-pointer text-[14px] font-semibold transition-all duration-200 bg-primary text-white hover:bg-primary-hover" onClick={onOpenBreaker}>打开技术破冰</button>
+          <button className="px-5 py-2 rounded-lg border border-border bg-transparent text-text cursor-pointer text-[14px] font-semibold transition-all duration-200 hover:border-primary hover:text-primary" onClick={onOpenDrill}>小批量刷题</button>
         </div>
       </section>
 
-      <section className="roadmap-principles">
+      <section className="grid grid-cols-4 max-md:grid-cols-1 gap-3">
+        <div className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
+          <span className="color-text2 text-[12px] font-bold">能力维度</span>
+          <strong className="text-text text-[24px] leading-tight">{model.capabilities.length}</strong>
+          <span className="text-text-secondary text-[12px] leading-normal">按腾讯中高级前端面试拆分</span>
+        </div>
+        <div className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
+          <span className="color-text2 text-[12px] font-bold">关键文档进度</span>
+          <strong className="text-text text-[24px] leading-tight">{doneDocs}/{totalDocs}</strong>
+          <span className="text-text-secondary text-[12px] leading-normal">来自当前学习系统已有内容</span>
+        </div>
+        <div className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
+          <span className="color-text2 text-[12px] font-bold">错题复训</span>
+          <strong className="text-text text-[24px] leading-tight">{wrongCount}</strong>
+          <span className="text-text-secondary text-[12px] leading-normal">优先从错题最多的能力维度回补</span>
+        </div>
+        <div className="border border-secondary/45 rounded-lg bg-gradient-to-br from-secondary/12 to-primary/8 bg-surface p-4 grid gap-1.5">
+          <span className="color-text2 text-[12px] font-bold">下一步建议</span>
+          <strong className="text-text text-[24px] leading-tight">{weakest?.capability.name || '先建立地图'}</strong>
+          <span className="text-text-secondary text-[12px] leading-normal">{weakest ? `当前完成 ${weakest.state.percent}%` : '从技术破冰开始'}</span>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-3 max-md:grid-cols-1 gap-3">
         {model.principles.map(item => (
-          <div className="principle-item" key={item}>{item}</div>
+          <div className="border-l-3 border-primary rounded-r-lg bg-surface p-3 px-4 text-[13px] text-text-secondary" key={item}>{item}</div>
         ))}
       </section>
 
-      <section className="roadmap-section">
-        <div className="roadmap-section-header">
-          <h2>能力模型</h2>
-          <p>每个能力都绑定已有文档、专项刷题和腾讯面试追问，避免只收藏资料不校准输出。</p>
+      <section className="grid gap-4.5">
+        <div className="mb-1">
+          <h2 className="text-[20px] font-bold mb-1.5 text-text-strong">能力模型</h2>
+          <p className="text-[13px] text-text-secondary">每个能力都绑定已有文档、专项刷题和腾讯面试追问，避免只收藏资料不校准输出。</p>
         </div>
-        <div className="capability-grid">
+        <div className="grid grid-cols-2 max-md:grid-cols-1 gap-3.5">
           {capabilityStates.map(({ capability, state }) => {
             const primaryDoc = state.firstUndone;
             const primaryModule = getModuleProgress(capability.drillModuleIds[0], progressCache)?.module;
             return (
-              <article className="capability-card" key={capability.id}>
-                <div className="capability-card-top">
-                  <h3>{capability.name}</h3>
-                  <span>{state.percent}%</span>
+              <article className="border border-border rounded-lg bg-surface p-4.5 grid gap-3" key={capability.id}>
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-[17px] font-semibold leading-snug text-text-strong">{capability.name}</h3>
+                  <span className="text-secondary text-[18px] font-extrabold">{state.percent}%</span>
                 </div>
-                <p className="capability-target">{capability.levelTarget}</p>
-                <div className="capability-progress">
-                  <div style={{ width: `${state.percent}%` }} />
+                <p className="text-text-secondary text-[13px] leading-relaxed">{capability.levelTarget}</p>
+                <div className="h-1.25 rounded-full bg-border overflow-hidden">
+                  <div className="h-full rounded-inherit bg-gradient-to-r from-primary to-secondary" style={{ width: `${state.percent}%` }} />
                 </div>
-                <div className="capability-meta">
+                <div className="flex gap-2 flex-wrap text-text-secondary text-[12px]">
                   <span>{state.doneCount}/{state.docLinks.length || 0} 关键文档</span>
+                  <span>·</span>
                   <span>{state.wrongCount} 道相关错题</span>
                 </div>
-                <div className="capability-focus">
-                  {capability.focus.map(item => <span key={item}>{item}</span>)}
+                <div className="flex gap-1.5 flex-wrap">
+                  {capability.focus.map(item => <span className="rounded-full bg-surface-alt text-text-secondary px-2.25 py-1 text-[11px]" key={item}>{item}</span>)}
                 </div>
-                <div className="capability-signals">
-                  {capability.interviewSignals.map(signal => <div key={signal}>{signal}</div>)}
+                <div className="grid gap-1.5 text-text-secondary text-[12px] leading-relaxed">
+                  {capability.interviewSignals.map(signal => (
+                    <div className="flex items-center gap-2" key={signal}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+                      <span>{signal}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="capability-docs">
+                <div className="flex gap-1.5 flex-wrap pt-0.5 border-t border-border/40 pt-2">
                   {state.docLinks.slice(0, 5).map(({ module, docIdx, doc }) => (
-                    <button key={`${module.id}-${docIdx}`} onClick={() => onOpenDoc(module.id, docIdx)}>
+                    <button key={`${module.id}-${docIdx}`} className="border border-border rounded-[7px] bg-transparent text-text-secondary cursor-pointer text-[12px] leading-normal p-1.25 px-2 max-w-full text-left transition-all duration-150 hover:border-primary hover:text-primary" onClick={() => onOpenDoc(module.id, docIdx)}>
                       {doc.title}
                     </button>
                   ))}
-                  {!state.docLinks.length && <span>当前公开内容中暂无可用文档</span>}
+                  {!state.docLinks.length && <span className="text-text-secondary text-[12px]">当前公开内容中暂无可用文档</span>}
                 </div>
-                <div className="capability-actions">
+                <div className="flex gap-2 flex-wrap pt-0.5">
                   {primaryDoc && (
-                    <button className="mini-btn primary" onClick={() => onOpenDoc(primaryDoc.module.id, primaryDoc.docIdx)}>
+                    <button className="border border-primary bg-primary text-white rounded-[7px] p-1.25 px-2.25 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:bg-primary-hover hover:border-primary-hover" onClick={() => onOpenDoc(primaryDoc.module.id, primaryDoc.docIdx)}>
                       学下一篇
                     </button>
                   )}
                   {primaryModule && (
-                    <button className="mini-btn" onClick={() => onOpenDrill(primaryModule.id)}>
+                    <button className="border border-border bg-surface-alt text-text-secondary rounded-[7px] p-1.25 px-2.25 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={() => onOpenDrill(primaryModule.id)}>
                       刷专项题
                     </button>
                   )}
                   {state.wrongCount > 0 && (
-                    <button className="mini-btn ghost" onClick={() => onOpenWrongBook(capability.drillModuleIds[0])}>
+                    <button className="border border-border bg-transparent text-text-secondary rounded-[7px] p-1.25 px-2.25 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={() => onOpenWrongBook(capability.drillModuleIds[0])}>
                       错题复训
                     </button>
                   )}
@@ -174,39 +180,39 @@ export function CapabilityRoadmap({
         </div>
       </section>
 
-      <section className="roadmap-section">
-        <div className="roadmap-section-header">
-          <h2>推荐学习路径</h2>
-          <p>每一轮学习都保持“地图 - 深文 - 小题量校准 - 项目追问 - 错题复训”的节奏。</p>
+      <section className="grid gap-4.5">
+        <div className="mb-1">
+          <h2 className="text-[20px] font-bold mb-1.5 text-text-strong">推荐学习路径</h2>
+          <p className="text-[13px] text-text-secondary">每一轮学习都保持“地图 - 深文 - 小题量校准 - 项目追问 - 错题复训”的节奏。</p>
         </div>
-        <div className="roadmap-phase-list">
+        <div className="grid gap-2.5">
           {model.roadmapPhases.map((phase, idx) => (
-            <div className="roadmap-phase" key={phase.id}>
-              <div className="phase-index">{idx + 1}</div>
-              <div className="phase-body">
-                <h3>{phase.name}</h3>
-                <p>{phase.goal}</p>
-                <div className="phase-actions">
-                  {phase.actions.map(action => <span key={action}>{action}</span>)}
+            <div className="grid grid-cols-[42px_minmax(0,1fr)_auto] max-md:grid-cols-1 gap-3.5 items-center border border-border rounded-lg bg-surface p-3.5" key={phase.id}>
+              <div className="w-8.5 h-8.5 rounded-full grid place-items-center bg-surface-alt text-secondary font-extrabold text-[15px]">{idx + 1}</div>
+              <div className="flex flex-col">
+                <h3 className="text-[15px] font-bold mb-1 text-text-strong">{phase.name}</h3>
+                <p className="text-text-secondary text-[12px] leading-relaxed">{phase.goal}</p>
+                <div className="flex gap-1.75 flex-wrap my-2">
+                  {phase.actions.map(action => <span className="bg-surface-alt rounded-full text-text-secondary text-[11px] px-2 py-0.5" key={action}>{action}</span>)}
                 </div>
-                <div className="phase-output">{phase.output}</div>
+                <div className="text-text-secondary text-[12px] leading-relaxed font-semibold text-secondary">{phase.output}</div>
               </div>
-              <button className="mini-btn" onClick={() => handlePhaseAction(phase.primaryAction)}>进入</button>
+              <button className="border border-border bg-surface-alt text-text-secondary rounded-[7px] p-1.5 px-3.5 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary max-md:w-full" onClick={() => handlePhaseAction(phase.primaryAction)}>进入</button>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="roadmap-section">
-        <div className="roadmap-section-header">
-          <h2>腾讯追问校准</h2>
-          <p>刷题结束后，用这些追问检查自己能不能从“知道答案”走到“能解决客户问题”。</p>
+      <section className="grid gap-4.5">
+        <div className="mb-1">
+          <h2 className="text-[20px] font-bold mb-1.5 text-text-strong">腾讯追问校准</h2>
+          <p className="text-[13px] text-text-secondary">刷题结束后，用这些追问检查自己能不能从“知道答案”走到“能解决客户问题”。</p>
         </div>
-        <div className="followup-grid">
+        <div className="grid grid-cols-3 max-md:grid-cols-1 gap-3">
           {model.capabilities.map(capability => (
-            <div className="followup-card" key={capability.id}>
-              <h3>{capability.name}</h3>
-              {capability.tencentFollowups.map(question => <p key={question}>{question}</p>)}
+            <div className="border border-border rounded-lg bg-surface p-3.75" key={capability.id}>
+              <h3 className="text-[14px] font-semibold mb-2.5 text-text-strong">{capability.name}</h3>
+              {capability.tencentFollowups.map(question => <p className="text-text-secondary text-[12px] leading-relaxed mb-2 last:mb-0" key={question}>{question}</p>)}
             </div>
           ))}
         </div>
@@ -214,3 +220,4 @@ export function CapabilityRoadmap({
     </div>
   );
 }
+

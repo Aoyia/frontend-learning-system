@@ -157,12 +157,12 @@ export function TechBreakerMap({ onOpenCard }) {
   }
 
   return (
-    <div className="breaker-page">
-      <div className="breaker-toolbar">
-        <div className="breaker-title">技术破冰</div>
-        <div className="breaker-actions">
-          <button className="map-tool-btn" onClick={() => fitView(nodes)} title="适配视图">适配</button>
-          <button className="map-tool-btn" onClick={resetLayout} title="重置布局">重置</button>
+    <div className="h-full min-h-0 flex flex-col relative">
+      <div className="absolute top-3.5 left-3.5 right-3.5 z-5 flex items-center justify-between gap-3 pointer-events-none">
+        <div className="px-3 py-2 border border-border rounded-lg bg-surface/86 text-text text-[14px] font-bold shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md pointer-events-auto">技术破冰</div>
+        <div className="flex gap-2 pointer-events-auto">
+          <button className="border border-border rounded-lg bg-surface/86 text-text-secondary px-2.75 py-2 cursor-pointer text-[12px] font-bold backdrop-blur-md transition-all duration-180 shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:border-primary hover:text-primary" onClick={() => fitView(nodes)} title="适配视图">适配</button>
+          <button className="border border-border rounded-lg bg-surface/86 text-text-secondary px-2.75 py-2 cursor-pointer text-[12px] font-bold backdrop-blur-md transition-all duration-180 shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:border-primary hover:text-primary" onClick={resetLayout} title="重置布局">重置</button>
         </div>
       </div>
 
@@ -214,9 +214,9 @@ export function TechBreakerMap({ onOpenCard }) {
                   if (!suppressNodeClickRef.current && clickable) onOpenCard(node.id);
                 }}
               >
-                <div className="canvas-node-title">{getCanvasNodeTitle(node)}</div>
+                <div className="text-[14px] font-bold leading-[1.35]">{getCanvasNodeTitle(node)}</div>
                 {node.type === 'text' && getCanvasNodeSummary(node) && (
-                  <div className="canvas-node-text">{getCanvasNodeSummary(node)}</div>
+                  <div className="whitespace-pre-wrap mt-1.75 text-[11px] leading-relaxed text-text-secondary">{getCanvasNodeSummary(node)}</div>
                 )}
               </div>
             );
@@ -226,3 +226,4 @@ export function TechBreakerMap({ onOpenCard }) {
     </div>
   );
 }
+

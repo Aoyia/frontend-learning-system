@@ -547,27 +547,27 @@ function App() {
     <>
       {toast && <div className="toast">{toast}</div>}
       {immersiveMode && (
-        <div className={`immersive-toolbar${toolbarVisible ? '' : ' hidden'}`}>
+        <div className={`fixed top-4 right-5 z-[999] flex items-center gap-2.5 bg-surface border border-border rounded-[24px] px-4 py-1.75 shadow-[0_4px_24px_rgba(0,0,0,0.3)] text-[13px] text-text-secondary transition-all duration-400 ease-in-out ${toolbarVisible ? 'opacity-1 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
           <span>专注阅读</span>
-          <div className="immersive-toolbar-sep" />
-          <button className="immersive-toolbar-exit" onClick={() => setImmersiveMode(false)}>
-            退出 <kbd>Esc</kbd>
+          <div className="w-[1px] h-3.5 bg-border" />
+          <button className="flex items-center gap-1.5 bg-transparent border-0 cursor-pointer text-text text-[13px] font-semibold p-0 hover:text-primary" onClick={() => setImmersiveMode(false)}>
+            退出 <kbd className="text-[11px] bg-surface-alt border border-border rounded px-1.25 py-0.25 font-sans">Esc</kbd>
           </button>
         </div>
       )}
-      <nav className="nav">
-        <div className="nav-logo">
-          <div className="nav-logo-wrapper" onClick={handleLogoPractise}>
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="nav-logo-img" ref={logoImgRef} />
+      <nav className="sticky top-0 z-[100] h-14 bg-surface border-b border-border px-3 md:px-6 flex items-center gap-2">
+        <div className="text-[14px] md:text-[16px] font-bold text-primary mr-1.5 md:mr-4 whitespace-nowrap flex items-center gap-2">
+          <div className="relative flex items-center justify-center cursor-pointer select-none" onClick={handleLogoPractise}>
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-9.5 h-9.5 object-contain shrink-0" ref={logoImgRef} />
             {flyEffects.map(effect => (
               <span key={effect.id} className="logo-fly-text">{effect.text}</span>
             ))}
           </div>
           前端知识库
         </div>
-        <div className="nav-tabs">
+        <div className="flex gap-1 max-md:overflow-x-auto">
           {PAGES.map(name => (
-            <button key={name} className={`nav-tab ${activeNavPage === name ? 'active' : ''}`} onClick={() => setRoute(name)}>
+            <button key={name} className={`px-2.25 md:px-4 py-1.5 rounded-lg cursor-pointer text-[14px] text-text-secondary transition-all duration-200 border-0 bg-transparent hover:bg-surface-alt hover:text-text max-md:whitespace-nowrap ${activeNavPage === name ? 'bg-primary text-white hover:bg-primary-hover' : ''}`} onClick={() => setRoute(name)}>
               {name === 'home'
                 ? '首页'
                 : name === 'roadmap'
@@ -582,10 +582,10 @@ function App() {
             </button>
           ))}
         </div>
-        <div className="nav-actions">
+        <div className="ml-auto flex items-center">
           <PetWidget petState={petState} onOpen={() => setPetPanelOpen(true)} />
           <button
-            className="theme-toggle-btn"
+            className="px-2.5 md:px-3 py-1.5 rounded-lg border border-border bg-surface-alt text-text text-[12px] md:text-[13px] cursor-pointer transition-all duration-200 whitespace-nowrap hover:border-primary hover:text-primary"
             onClick={toggleTheme}
             title="切换白天/夜间模式"
           >
@@ -594,7 +594,7 @@ function App() {
         </div>
       </nav>
 
-      <div className="main">
+      <div className="flex-1 flex overflow-hidden h-[calc(100vh-56px)] relative">
         {page === 'learn' && currentModule && (
           <Sidebar
             currentModuleId={currentModuleId}
@@ -603,7 +603,7 @@ function App() {
             onNavToDoc={navToDoc}
           />
         )}
-        <main className={`content ${page === 'breaker' && !currentBreakerNodeId ? 'content-map' : ''}`} ref={contentRef}>
+        <main className={`content flex-1 overflow-y-auto ${page === 'breaker' && !currentBreakerNodeId ? 'p-0 overflow-hidden' : 'p-8 px-12 max-md:p-4 max-md:px-5 max-md:pb-18'}`} ref={contentRef}>
           {page === 'home' && (
             <Home
               progressCache={progressCache}

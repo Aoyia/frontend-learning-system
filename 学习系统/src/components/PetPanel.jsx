@@ -65,19 +65,19 @@ export function PetPanel({ petState, petEvents, onClose }) {
         data-realm={displayStage.realm}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="pet-panel-head">
+        <div className="flex justify-between items-start gap-4 mb-2">
           <div>
-            <div className="pet-panel-eyebrow">学习战宠</div>
-            <h2>{displayStage.realm} · {displayStage.name}</h2>
-            <p>{displayStage.desc}</p>
+            <div className="text-secondary text-[11px] font-extrabold tracking-wider uppercase mb-1.5">学习战宠</div>
+            <h2 className="text-[22px] font-extrabold text-text-strong m-0 mb-1.5">{displayStage.realm} · {displayStage.name}</h2>
+            <p className="text-text-secondary text-[13px] leading-relaxed m-0">{displayStage.desc}</p>
             {isPreviewing && (
-              <button className="pet-preview-reset-btn" onClick={() => setPreviewStage(null)}>
+              <button className="mt-2 px-3 py-1.25 border border-border rounded-md bg-surface text-text-secondary text-[11px] font-semibold cursor-pointer transition-all duration-200 inline-flex items-center gap-1 w-fit hover:border-secondary hover:text-secondary hover:bg-secondary/5" onClick={() => setPreviewStage(null)}>
                 ↩ 返回我当前的实际境界
               </button>
             )}
           </div>
           <button
-            className="pet-panel-close"
+            className="w-8 h-8 rounded-full border border-border bg-surface-alt text-text-secondary cursor-pointer grid place-items-center text-[18px] leading-none transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] hover:border-danger hover:text-danger hover:rotate-90"
             onClick={onClose}
             aria-label="关闭面板"
             title="关闭面板"
@@ -87,19 +87,17 @@ export function PetPanel({ petState, petEvents, onClose }) {
         </div>
 
         {/* 神兽展示区 */}
-        <div className="pet-zenith-container">
+        <div className="flex flex-col items-center my-2.5 relative">
           {isPreviewing && (
-            <span className="pet-preview-badge">✨ 预览境界形态</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/15 border border-warning/30 text-warning text-[11px] font-bold tracking-wide mb-2.5 w-fit">✨ 预览境界形态</span>
           )}
-
-
 
           <div className="pet-zenith-avatar-wrapper">
             {/* 境界背景光效 —— 在宠物最底层 */}
             <PetAuraBg realm={displayStage.realm} />
             {/* SVG 聚灵修为圆环 */}
-            <svg className="pet-aura-ring" viewBox="0 0 160 160" style={{ overflow: 'visible' }}>
-              <circle className="pet-aura-ring-bg" cx="80" cy="80" r={radius} />
+            <svg className="absolute w-40 h-40 z-1 pointer-events-none" viewBox="0 0 160 160" style={{ overflow: 'visible' }}>
+              <circle className="fill-none stroke-border stroke-1" cx="80" cy="80" r={radius} />
               <circle
                 className="pet-aura-ring-fill"
                 cx="80"
@@ -118,23 +116,32 @@ export function PetPanel({ petState, petEvents, onClose }) {
           </div>
 
           {/* 扁平化数据属性 */}
-          <div className="pet-zenith-metrics">
-            <span>累计修为 <strong>{petState.xp || 0}</strong></span>
-            <span className="separator">|</span>
-            <span>今日修为 <strong>+{petState.todayXp || 0}</strong></span>
-            <span className="separator">|</span>
-            <span>连修天数 <strong>{petState.streak || 0}天</strong></span>
+          <div className="flex justify-center gap-3 items-center mt-4.5 text-text-secondary text-[12px] tracking-wider">
+            <span className="inline-flex items-center">累计修为 <strong className="text-text font-bold ml-0.75">{petState.xp || 0}</strong></span>
+            <span className="text-border text-[10px]">|</span>
+            <span className="inline-flex items-center">今日修为 <strong className="text-text font-bold ml-0.75">+{petState.todayXp || 0}</strong></span>
+            <span className="text-border text-[10px]">|</span>
+            <span className="inline-flex items-center">连修天数 <strong className="text-text font-bold ml-0.75">{petState.streak || 0}天</strong></span>
           </div>
         </div>
 
         {/* 大境界修仙天梯 */}
-        <div className="pet-ladder-container">
-          <div className="pet-ladder-line" />
-          <div className="pet-ladder">
+        <div className="w-full my-5 relative">
+          <div className="absolute left-2.5 right-2.5 top-3.5 h-[1px] bg-border z-0" />
+          <div className="flex justify-between relative z-1">
             {LADDER_STAGES.map(stage => {
               const unlocked = (petState.xp || 0) >= PET_STAGES.find(s => s.realm === stage.label).threshold;
               const isCurrentlyActive = view.current.realm === stage.label;
               const isSelected = displayStage.realm === stage.label;
+
+              let dotClass = "w-2 h-2 rounded-full border-2 border-surface box-content transition-all duration-300 ease-out ";
+              if (isCurrentlyActive || isSelected) {
+                dotClass += "bg-secondary shadow-[0_0_8px_var(--accent2)] scale-[1.2]";
+              } else if (unlocked) {
+                dotClass += "bg-secondary";
+              } else {
+                dotClass += "bg-text-secondary";
+              }
 
               return (
                 <div
@@ -143,11 +150,11 @@ export function PetPanel({ petState, petEvents, onClose }) {
                     const target = PET_STAGES.find(s => s.realm === stage.label);
                     if (target) setPreviewStage(target);
                   }}
-                  className={`pet-ladder-node ${unlocked ? 'unlocked' : ''} ${(isCurrentlyActive || isSelected) ? 'active' : ''}`}
+                  className={`flex flex-col items-center gap-1.5 cursor-pointer flex-1 transition-all duration-300 ease-out ${unlocked ? 'opacity-75' : 'opacity-30'} ${(isCurrentlyActive || isSelected) ? 'opacity-100 scale-105' : ''}`}
                   title={`${stage.label} 境界 (${unlocked ? '已解锁，点击可预览形态' : '暂未解锁'})`}
                 >
-                  <div className="pet-ladder-dot" />
-                  <span>{stage.label}</span>
+                  <div className={dotClass} />
+                  <span className={`text-[11px] font-medium transition-colors duration-300 ${unlocked ? 'text-text' : 'text-text-secondary'}`}>{stage.label}</span>
                 </div>
               );
             })}
@@ -155,45 +162,54 @@ export function PetPanel({ petState, petEvents, onClose }) {
         </div>
 
         {/* 图鉴入口按钮 */}
-        <button className="pet-codex-trigger-btn" onClick={() => setShowCodices(true)}>
+        <button className="block mx-auto mt-3 bg-transparent border border-border rounded-lg px-4 py-1.5 text-text-secondary text-[11px] cursor-pointer tracking-widest transition-all duration-250 ease-out hover:border-secondary hover:text-secondary hover:bg-secondary/4" onClick={() => setShowCodices(true)}>
           📖 开启神兽图志
         </button>
 
         {/* 底部流式日志走字栏 */}
-        <div className="pet-ticker-container">
+        <div className="border-t border-border pt-4 mt-2.5">
           {petEvents.length ? (
-            <div className="pet-ticker" title="修行历程摘要">
-              <span className="pet-ticker-icon">⚡</span>
-              <span className="pet-ticker-content">
+            <div className="flex items-center gap-2 text-[11px] text-text-secondary leading-normal bg-surface-alt px-3 py-2 rounded-lg" title="修行历程摘要">
+              <span className="text-secondary font-extrabold shrink-0">⚡</span>
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap text-left">
                 <strong>{petEvents[0].title}</strong>：{petEvents[0].detail}
               </span>
             </div>
           ) : (
-            <div className="pet-ticker">
-              <span className="pet-ticker-icon">⚡</span>
-              <span className="pet-ticker-content">道友尚未开始修炼，快去阅读讲义或刷题获取修为吧！</span>
+            <div className="flex items-center gap-2 text-[11px] text-text-secondary leading-normal bg-surface-alt px-3 py-2 rounded-lg">
+              <span className="text-secondary font-extrabold shrink-0">⚡</span>
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap text-left">道友尚未开始修炼，快去阅读讲义或刷题获取修为吧！</span>
             </div>
           )}
         </div>
 
         {/* 全屏半透明神兽进化图志 Overlay */}
         {showCodices && (
-          <div className="pet-codex-overlay" onClick={() => setShowCodices(false)}>
-            <div className="pet-codex-head" onClick={(e) => e.stopPropagation()}>
-              <h3>神兽进化图志</h3>
+          <div className="fixed inset-0 bg-bg/96 z-[600] flex flex-col p-10 overflow-y-auto animate-[pet-fade-in_0.3s_cubic-bezier(0.25,1,0.5,1)_forwards]" onClick={() => setShowCodices(false)}>
+            <div className="flex justify-between items-center mb-6" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-[20px] font-extrabold text-text-strong">神兽进化图志</h3>
               <button
-                className="pet-panel-close"
+                className="w-8 h-8 rounded-full border border-border bg-surface-alt text-text-secondary cursor-pointer grid place-items-center text-[18px] leading-none transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] hover:border-danger hover:text-danger hover:rotate-90"
                 onClick={() => setShowCodices(false)}
                 aria-label="关闭图志"
               >
                 ×
               </button>
             </div>
-            <div className="pet-codex-grid" onClick={(e) => e.stopPropagation()}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4" onClick={(e) => e.stopPropagation()}>
               {PET_STAGES.map(stage => {
                 const unlocked = (petState.xp || 0) >= stage.threshold;
                 const isCurrent = stage.index === view.current.index;
                 const isSelected = displayStage.index === stage.index;
+
+                let cardCls = "border border-border rounded-xl bg-surface-alt p-4 py-3 flex flex-col items-center gap-2 text-center transition-all duration-250 ease-out cursor-pointer ";
+                if (isCurrent) {
+                  cardCls += "opacity-100 border-primary shadow-[0_0_15px_rgba(108,99,255,0.15)] bg-[radial-gradient(circle,rgba(108,99,255,0.06)_0%,var(--surface2)_100%)]";
+                } else if (unlocked) {
+                  cardCls += "opacity-85 hover:opacity-100 hover:-translate-y-0.5 hover:border-secondary";
+                } else {
+                  cardCls += "opacity-25";
+                }
 
                 return (
                   <div
@@ -202,12 +218,12 @@ export function PetPanel({ petState, petEvents, onClose }) {
                       setPreviewStage(stage);
                       setShowCodices(false);
                     }}
-                    className={`pet-codex-card ${unlocked ? 'unlocked' : ''} ${isCurrent ? 'active' : ''} ${isSelected ? 'selected' : ''}`}
+                    className={cardCls}
                     title={`${stage.realm} · ${stage.name} (${unlocked ? '已解锁，点击可预览法相' : `需 ${stage.threshold} 修为`})`}
                   >
-                    <img src={stage.image} alt={stage.name} />
-                    <strong>{stage.realm}</strong>
-                    <span>{stage.name}</span>
+                    <img className="w-14.5 h-14.5 object-contain" src={stage.image} alt={stage.name} style={{ filter: unlocked ? 'none' : 'grayscale(100%) opacity(40%)' }} />
+                    <strong className="text-[13px] font-bold text-text-strong">{stage.realm}</strong>
+                    <span className="text-[11px] text-text-secondary">{stage.name}</span>
                   </div>
                 );
               })}

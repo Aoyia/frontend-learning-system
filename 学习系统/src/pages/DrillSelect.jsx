@@ -3,10 +3,10 @@ import { DEFAULT_DRILL_LIMIT, QUICK_DRILL_LIMIT } from '../utils/quiz.js';
 
 export function DrillSelect({ drillStatCache, onStartDrill }) {
   return (
-    <div className="module-select-page">
-      <h2>🎯 模块刷题</h2>
-      <p>默认轻量练习 20 题，先完成一小批，再根据错题和未练题持续循环。</p>
-      <div className="module-select-cards">
+    <div className="max-w-[700px] mx-auto">
+      <h2 className="text-[22px] font-bold mb-1.5 text-text-strong">🎯 模块刷题</h2>
+      <p className="text-text-secondary text-[13px] mb-6">默认轻量练习 20 题，先完成一小批，再根据错题和未练题持续循环。</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6">
         {LEARNING_CONTENT.modules.map(m => {
           const total = m.docs.reduce((n, d) => n + (d.quiz ? d.quiz.length : 0), 0);
           const allQids = [];
@@ -15,18 +15,20 @@ export function DrillSelect({ drillStatCache, onStartDrill }) {
           const latestCorrect = allQids.filter(id => drillStatCache[id]?.lastCorrect).length;
           const latestPct = done ? Math.round((latestCorrect / done) * 100) : 0;
           return (
-            <div className="module-select-card" key={m.id} onClick={() => onStartDrill(m.id, DEFAULT_DRILL_LIMIT)}>
-              <div className="icon">{m.icon}</div>
-              <div className="name">{m.name}</div>
-              <div className="count">{total} 题 · 已练 {done} · 最近正确率 {latestPct}%</div>
-              <div className="module-card-actions">
-                <button className="mini-btn primary" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, DEFAULT_DRILL_LIMIT); }}>
+            <div className="bg-surface border-2 border-border rounded-xl p-4 cursor-pointer transition-all duration-200 text-center hover:border-primary flex flex-col justify-between" key={m.id} onClick={() => onStartDrill(m.id, DEFAULT_DRILL_LIMIT)}>
+              <div>
+                <div className="text-[24px] mb-2">{m.icon}</div>
+                <div className="text-[14px] font-semibold text-text-strong">{m.name}</div>
+                <div className="text-[12px] text-text-secondary mt-1">{total} 题 · 已练 {done} · 最近正确率 {latestPct}%</div>
+              </div>
+              <div className="flex justify-center gap-1.5 flex-wrap mt-3">
+                <button className="w-fit border border-accent bg-accent text-white rounded-[7px] px-2 py-1 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:bg-primary-hover hover:border-primary-hover" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, DEFAULT_DRILL_LIMIT); }}>
                   练 {Math.min(DEFAULT_DRILL_LIMIT, total)} 题
                 </button>
-                <button className="mini-btn" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, QUICK_DRILL_LIMIT); }}>
+                <button className="w-fit border border-border bg-surface-alt text-text-secondary rounded-[7px] px-2 py-1 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, QUICK_DRILL_LIMIT); }}>
                   短练 {Math.min(QUICK_DRILL_LIMIT, total)}
                 </button>
-                <button className="mini-btn ghost" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, null); }}>
+                <button className="w-fit border border-transparent bg-transparent text-text-secondary rounded-[7px] px-2 py-1 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, null); }}>
                   全量复盘
                 </button>
               </div>

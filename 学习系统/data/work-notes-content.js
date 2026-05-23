@@ -102,10 +102,15 @@ export const VUE_SPECIAL_CONTENT = {
         },
         {
           type: 'single',
-          question: '在组件嵌套渲染中，父子 render effect 的正确关系应是？',
-          options: ['子 effect 永远覆盖父 effect，不需要恢复', '通过保存/恢复前一个 active effect 保证上下文正确', '父子共享同一个 effect 实例', '父 effect 在子 effect 创建后会永久失效'],
+          question: '在 Vue 3 响应式系统的组件嵌套渲染中，父组件 render effect 执行过程中触发子组件 render effect 时，父子 render effect 的正确关系应是？',
+          options: [
+            '子 effect 永远覆盖父 effect，不需要恢复：这样会导致父组件后续读取的响应式数据被错误收集到子 effect 上。',
+            '通过保存/恢复前一个 active effect 保证上下文正确：进入子 effect 前切换当前 active effect，子 effect 执行完恢复父 effect。',
+            '父子共享同一个 effect 实例：这会破坏组件级依赖边界，子组件依赖变化可能错误驱动父组件或其他子树更新。',
+            '父 effect 在子 effect 创建后会永久失效：子组件渲染只是临时切换依赖收集上下文，不会让父组件 render effect 永久失效。',
+          ],
           answer: 1,
-          explain: '嵌套 effect 的核心就是执行前保存上下文，执行后恢复。',
+          explain: '嵌套 effect 的核心是执行前保存当前上下文，执行后恢复上一个 active effect，保证父子组件各自的响应式依赖归属正确。',
         },
         {
           type: 'single',

@@ -1,11 +1,18 @@
 import { formatAnswer, isAnswerCorrect } from '../utils/quiz.js';
+import { marked } from 'marked';
 
 export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answered, onToggleOption, onReadChapter }) {
   const typeLabel = question.type === 'single' ? '单选' : question.type === 'multiple' ? '多选' : '判断';
+  const renderOptionMarkdown = text => ({ __html: marked.parse(text || '') });
 
   return (
     <div className="quiz-question" id={`qq-${globalIdx}`}>
       <div className="quiz-question-num">第 {globalIdx + 1} 题 · {typeLabel}</div>
+      {question._moduleName && question._docTitle && (
+        <div className="quiz-question-context">
+          {question._moduleName} / {question._docTitle}
+        </div>
+      )}
       <div className="quiz-question-text">{question.question}</div>
       <div className="quiz-options">
         {question.options.map((opt, i) => {
@@ -22,7 +29,7 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
           return (
             <div key={opt} className={`quiz-option ${cls}`} onClick={isSubmitted ? undefined : () => onToggleOption(globalIdx, i)}>
               <span className="opt-key">{keyLabel}</span>
-              <span>{opt}</span>
+              <div className="quiz-option-content" dangerouslySetInnerHTML={renderOptionMarkdown(opt)} />
             </div>
           );
         })}
@@ -33,7 +40,12 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
           {answered !== undefined && !isAnswerCorrect(question, answered) && (
             <div><strong>你的答案：</strong>{formatAnswer(question, answered)}</div>
           )}
-          {question.explain && <div className="quiz-explain-text">💡 {question.explain}</div>}
+          {question.explain && (
+            <div
+              className="quiz-explain-text"
+              dangerouslySetInnerHTML={{ __html: marked.parse(question.explain) }}
+            />
+          )}
           {question._moduleId && (
             <div className="recommended-reading">
               <span>推荐阅读：</span>

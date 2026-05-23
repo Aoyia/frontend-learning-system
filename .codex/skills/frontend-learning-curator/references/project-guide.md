@@ -128,7 +128,7 @@ B. Option
 解析：Explanation
 ```
 
-Supported `module` keys in `docs-loader.js`: `vue`, `engineering`, `performance`, `project-prep`, `scenarios`. Add a module config before using a new key. Chinese folder names are for human navigation; `module` is the stable app routing key.
+Supported `module` keys in `docs-loader.js`: `vue`, `react`, `engineering`, `performance`, `project-prep`, `scenarios`. Add a module config before using a new key. Chinese folder names are for human navigation; `module` is the stable app routing key.
 
 When converting a blog:
 
@@ -145,6 +145,7 @@ Use this checklist when the user directly pastes a blog/article/Markdown note/lo
 1. Decide whether the user explicitly requested "only answer/explain". If not, treat the paste as a request to add a Markdown blog document.
 2. Classify the module:
    - Vue/core/framework mechanism -> `module: vue`, folder `Vue`
+   - React rendering/state/performance mechanism -> `module: react`, folder `React`
    - tooling/build/release/CI/packages -> `module: engineering`, folder `工程化`
    - Web Vitals/render/network/memory -> `module: performance`, folder `性能优化`
    - project interview prep/personal project deep-dive/interview answer packs -> `module: project-prep`, folder `项目准备`

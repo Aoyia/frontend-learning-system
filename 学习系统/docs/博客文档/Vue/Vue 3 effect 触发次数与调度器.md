@@ -279,16 +279,20 @@ state.c = 30
 ## 📝 面试题自测
 
 ### Q1 [single]
-以下代码，`state.a = 10; state.b = 20; state.c = 30` 三次赋值会触发几次 effect（不含初始化）？
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，以下代码，`state.a = 10; state.b = 20; state.c = 30` 三次赋值会触发几次 effect（不含初始化）？
 A. 1 次（合并执行）
+   适用于“组件 RenderEffect 通过 scheduler 入队”的场景；但本题问的是没有 scheduler 的裸 effect。
 B. 2 次
+   误把三次同步赋值理解成只合并其中两次，没有对应的 Vue 响应式执行规则。
 C. 3 次
+   裸 effect 没有传 scheduler，依赖每变化一次都会同步重新执行一次，因此三次赋值触发三次。
 D. 0 次（Vue 自动批处理）
+   把组件更新队列的批处理能力错误套到了裸 effect 上，裸 effect 不会自动进入组件更新队列。
 答案：C
 解析：裸 effect（没有传 scheduler）每次依赖变化都会同步直接执行，3 次赋值触发 3 次，不存在自动合并。
 
 ### Q2 [single]
-包含初始化执行，以上代码总共输出几次？
+在 Vue 3 裸 effect 示例中，effect 注册时会先初始化执行一次；包含初始化执行时，以上代码总共输出几次？
 A. 3
 B. 4
 C. 6
@@ -297,21 +301,25 @@ D. 1
 解析：effect 注册时立即执行一次（输出 6），随后 3 次赋值各触发一次（15、33、60），共 4 次。
 
 ### Q3 [judgment]
-Vue3 组件的 RenderEffect 和裸 effect 一样，依赖变化时都会立即同步执行更新。
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，Vue3 组件的 RenderEffect 和裸 effect 一样，依赖变化时都会立即同步执行更新。
 答案：错
 解析：组件 RenderEffect 的 ReactiveEffect 上挂了 scheduler，依赖变化时调用 scheduler → queueJob → 进入微任务队列去重执行，不是立即同步运行。
 
 ### Q4 [multiple]
-关于 Vue3 组件更新合并的核心机制，以下哪些说法正确？
-A. 组件 RenderEffect 有 scheduler，不直接执行而是把 job 放进队列
-B. 队列使用 Set 或去重机制，同一个 job 多次入队只执行一次
-C. 队列通过 Promise.then（微任务）统一 flush
-D. 所有 effect 包括裸 effect 天生都会合并执行
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，关于 Vue3 组件更新合并的核心机制，以下哪些说法正确？
+A. 组件 RenderEffect 有 scheduler：
+   `trigger` 命中依赖后不会立刻执行组件更新函数，而是把组件 update job 交给调度队列。
+B. 队列使用去重机制：
+   同一个组件在同一轮同步代码里多次触发更新，只保留同一个 job，避免重复 render。
+C. 队列通过微任务统一 flush：
+   常见模型是 `Promise.resolve().then(flushJobs)`，等同步代码结束后批量执行。
+D. 所有 effect 包括裸 effect 天生都会合并执行：
+   这是错误泛化；裸 effect 默认同步执行，只有显式提供 scheduler 才能改造成队列模型。
 答案：ABC
 解析：D 错误，合并执行是 RenderEffect 的 scheduler 机制赋予的，裸 effect 默认无 scheduler，不会自动合并。
 
 ### Q5 [single]
-想让裸 effect 实现合并执行，核心需要传入什么参数？
+在 Vue 3 响应式系统中，如果想让裸 effect 像组件更新一样合并执行，核心需要给 effect 传入什么参数？
 A. lazy: true
 B. scheduler 函数，配合任务队列和微任务 flush
 C. deep: true
@@ -320,7 +328,7 @@ D. flush: 'post'
 解析：为 effect 传入 scheduler 后，依赖变化时不再直接执行，而是调用 scheduler，由你自己决定何时执行。配合 Set 队列去重 + Promise.resolve().then flush，即可实现合并。
 
 ### Q6 [single]
-在 queueJob 的手写实现中，队列使用 `Set` 而不是 `Array` 的原因是？
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，在 queueJob 的手写实现中，队列使用 `Set` 而不是 `Array` 的原因是？
 A. Set 的 forEach 更快
 B. Set 自动对相同引用的 job 去重，确保同一轮同步中同一个 job 只执行一次
 C. Array 不能存放函数
@@ -329,12 +337,12 @@ D. Set 支持异步迭代
 解析：使用 Set 的关键在于去重语义：同一个 runner 函数引用多次 add 只会存在一份，天然实现了 job 去重。
 
 ### Q7 [judgment]
-`Promise.resolve().then(flush)` 实现的是宏任务（macro task）批处理。
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，`Promise.resolve().then(flush)` 实现的是宏任务（macro task）批处理。
 答案：错
 解析：Promise.then 是微任务（microtask），在当前同步代码全部执行完毕后、浏览器渲染前立即执行，不是宏任务（setTimeout/setInterval）。
 
 ### Q8 [multiple]
-以下关于 Vue3 组件内部 effect 结构的描述，哪些正确？
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，以下关于 Vue3 组件内部 effect 结构的描述，哪些正确？
 A. `instance.effect` 是一个 ReactiveEffect 实例
 B. effect.scheduler 被赋值为 `() => queueJob(job)`，而非直接执行更新
 C. job 是 `effect.runIfDirty` 的绑定函数，只在 dirty 时才真正执行
@@ -343,7 +351,7 @@ D. 每次数据变化组件都会立即同步重新 render
 解析：D 错误。组件有 scheduler，数据变化时触发 scheduler 入队，在微任务中统一执行，不是同步立即 render。
 
 ### Q9 [single]
-手写调度器实现中，`isFlushing` 标志位的作用是？
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，手写调度器实现中，`isFlushing` 标志位的作用是？
 A. 标记当前是否处于 effect 收集依赖阶段
 B. 防止在 flush 期间重复创建多个 Promise.then 回调，保证只有一个微任务在等待执行
 C. 标记 effect 是否已被销毁
@@ -352,12 +360,12 @@ D. 控制 effect 的执行优先级
 解析：当第一个 job 入队时将 isFlushing 设为 true，并创建一个 Promise.then 等待执行。后续同轮的 job 入队时发现 isFlushing 已为 true，不再重复创建新的微任务，避免 flush 函数被调用多次。
 
 ### Q10 [judgment]
-裸 effect 在传入 scheduler 后，初始化时依然会执行一次（同步）。
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，裸 effect 在传入 scheduler 后，初始化时依然会执行一次（同步）。
 答案：对
 解析：scheduler 只影响"依赖变化后的重新执行"时机，不影响 effect 注册时的首次执行。首次执行始终是同步的，用于完成依赖收集。
 
 ### Q11 [single]
-在手写的 queueJob + flush 方案中，连续赋值 state.a = 10; state.b = 20; state.c = 30 后，最终额外输出几次？
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，在手写的 queueJob + flush 方案中，连续赋值 state.a = 10; state.b = 20; state.c = 30 后，最终额外输出几次？
 A. 3 次（15、33、60）
 B. 2 次
 C. 1 次（60）
@@ -366,7 +374,7 @@ D. 0 次（全部合并取消）
 解析：3 次赋值都调用了 scheduler → queueJob，但 runner 同一个引用在 Set 里只存一份，最终 flush 时只执行一次，输出最终值 60。
 
 ### Q12 [multiple]
-关于 RenderEffect 和裸 effect 的区别，以下哪些是正确的？
+在 Vue 3 响应式系统的 effect 调度与组件 render effect 场景中，关于 RenderEffect 和裸 effect 的区别，以下哪些是正确的？
 A. 裸 effect 同步执行，适合调试和追踪精确的响应时机
 B. RenderEffect 通过 scheduler 延迟执行，适合合并多次数据变更后统一更新视图
 C. 两者底层都使用 ReactiveEffect，本质上是同一套响应式机制

@@ -11,7 +11,7 @@ export const TENCENT_FRONTEND_CAPABILITY_MODEL = {
       id: 'framework-source',
       name: '框架源码与运行机制',
       levelTarget: '能从响应式、调度、渲染、Diff、组件通信解释页面现象，不停留在 API 背诵。',
-      focus: ['Vue 响应式', 'effect 调度', 'Diff 与渲染', '模板编译', '依赖注入'],
+      focus: ['Vue 响应式', 'effect 调度', 'Diff 与渲染', '模板编译', '依赖注入', 'React 并发渲染'],
       interviewSignals: [
         '能说清核心数据结构和执行流程',
         '能解释为什么这样设计而不是只说怎么用',
@@ -23,12 +23,14 @@ export const TENCENT_FRONTEND_CAPABILITY_MODEL = {
         { moduleId: 'vue-special', titleIncludes: 'Diff' },
         { moduleId: 'vue-special', titleIncludes: '模板' },
         { moduleId: 'vue-special', titleIncludes: 'provide / inject' },
+        { moduleId: 'react-special', titleIncludes: '并发渲染' },
       ],
-      drillModuleIds: ['vue-special'],
+      drillModuleIds: ['vue-special', 'react-special'],
       tencentFollowups: [
         '如果页面频繁重复渲染，你怎么从响应式依赖和调度器角度定位？',
         'Diff 为什么需要从后向前插入，锚点选择会影响什么？',
         '组件库里什么时候适合 provide/inject，什么时候不适合？',
+        'React 里 urgent update 和 transition update 的区别是什么？',
       ],
     },
     {

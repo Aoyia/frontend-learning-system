@@ -55,6 +55,12 @@ const MODULE_CONFIGS = {
     icon: '🖖',
     desc: 'Vue 3 核心机制专项：响应式原理、Diff、computed、scheduler，高频面试覆盖。',
   },
+  react: {
+    id: 'react-special',
+    name: 'React 专项模块',
+    icon: '⚛️',
+    desc: 'React 渲染机制、并发特性、性能优化和复杂状态建模专项。',
+  },
   engineering: {
     id: 'engineering-special',
     name: '前端工程化专项',
@@ -145,13 +151,22 @@ function parseDocsQuiz(markdown) {
       .replace('判断', 'judgment');
 
     const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-    const answerLine = lines.find(l => l.startsWith('答案：'));
-    const explainLine = lines.find(l => l.startsWith('解析：'));
+    const answerIdx = lines.findIndex(l => l.startsWith('答案：'));
+    const explainIdx = lines.findIndex(l => l.startsWith('解析：'));
+    const contentEndIdx = [answerIdx, explainIdx].filter(i => i >= 0).sort((a, b) => a - b)[0] ?? lines.length;
+    const questionAndOptions = lines.slice(0, contentEndIdx);
+    const answerLine = answerIdx >= 0 ? lines[answerIdx] : '';
     const answerStr = answerLine?.replace('答案：', '').trim() || '';
-    const explain = explainLine?.replace('解析：', '').trim() || '';
+    const explain = explainIdx >= 0
+      ? lines
+        .slice(explainIdx)
+        .map((line, lineIdx) => lineIdx === 0 ? line.replace('解析：', '').trim() : line)
+        .join('\n')
+        .trim()
+      : '';
 
     if (type === 'judgment') {
-      const question = lines.find(l => !l.startsWith('答案：') && !l.startsWith('解析：'));
+      const question = questionAndOptions.find(l => !l.startsWith('答案：') && !l.startsWith('解析：'));
       if (!question) return null;
       return {
         type: 'judgment',
@@ -162,12 +177,20 @@ function parseDocsQuiz(markdown) {
       };
     }
 
-    const question = lines.find(
+    const question = questionAndOptions.find(
       l => !/^[A-F]\./.test(l) && !l.startsWith('答案：') && !l.startsWith('解析：')
     );
-    const options = lines
-      .filter(l => /^[A-F]\./.test(l))
-      .map(l => l.replace(/^[A-F]\.\s*/, ''));
+    const options = [];
+    let currentOption = null;
+    questionAndOptions.forEach(line => {
+      if (/^[A-F]\./.test(line)) {
+        if (currentOption) options.push(currentOption);
+        currentOption = line.replace(/^[A-F]\.\s*/, '');
+      } else if (currentOption && line !== question) {
+        currentOption += `\n${line}`;
+      }
+    });
+    if (currentOption) options.push(currentOption);
 
     if (!question || options.length < 2) return null;
 
@@ -246,7 +269,7 @@ function buildModulesFromDocs(docsMap) {
     })
     .sort((a, b) => {
       // 保持固定顺序
-      const order = ['vue', 'engineering', 'performance', 'project-prep', 'scenarios'];
+      const order = ['vue', 'react', 'engineering', 'performance', 'project-prep', 'scenarios'];
       return order.indexOf(a.id.replace('-special', '')) - order.indexOf(b.id.replace('-special', ''));
     });
 }

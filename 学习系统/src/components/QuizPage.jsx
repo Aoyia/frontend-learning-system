@@ -92,7 +92,17 @@ function QuestionBlock({ question, globalIdx, isSubmitted, selected, answered, o
             <div><strong>你的答案：</strong>{formatAnswer(question, answered)}</div>
           )}
           {question.explain && <div className="quiz-explain-text">💡 {question.explain}</div>}
-
+          {question._docTitle && (
+            <div className="recommended-reading">
+              <strong>推荐阅读：</strong>
+              <button
+                className="reading-link"
+                onClick={() => onReadChapter(question._moduleId, question._docIdx)}
+              >
+                {question._moduleName} / {question._docTitle}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

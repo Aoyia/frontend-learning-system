@@ -246,4 +246,4 @@ PRD.md              本需求文档
 - **遗漏文件全覆盖**：全面补齐了第一阶段由于分包或路径遗漏的 5 篇 Vue 源码博客文档（包含 Diff 算法、Effect 触发与调度器、复杂表单验证、模板到渲染函数转换、异步组件原理共 60 道题目）以及 5 个 JS 语义化数据文件（`security-content.js`、`rendering-architecture-content.js`、`delivery-platform-content.js`、`testing-quality-content.js`、`state-data-content.js`），确保全系统所有题库的解析完成 100% 的深度重构。
 - **语法故障修复**：解决了 Vue 源码 Markdown 处理脚本中由于跨行单引号语法冲突引起的 Node.js 执行异常。将字符串定义规范化为反引号，顺利运行并将全新解析注入各 Markdown 对应章节。
 - **构建与交付保障**：通过 `npm run build` 静态打包验证，无任何编译或解析错误，全新防拷打多行文本解析在学习系统中流畅展示。
-
+- **解析器截断缺陷修复与选对展示解析**：修复了 `docs-loader.js` 解析器只按单行过滤提取 `解析：`、导致多行防拷打解析被截断为空字符串的 Bug。通过将 block 从 `解析：` 处切分并提取其后所有内容为 explain，成功让包含 Vue 博客等 Markdown 自测题的详细防拷打解析在答题提交后（无论用户答对还是答错）均能完整、正确地展示出来，防止了“因答对而隐藏解析或因解析为空不展示”的体验问题。

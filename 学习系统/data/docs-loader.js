@@ -137,11 +137,14 @@ function parseDocsQuiz(markdown) {
       .replace('多选', 'multiple')
       .replace('判断', 'judgment');
 
-    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+    const explainIdx = block.indexOf('解析：');
+    const hasExplain = explainIdx !== -1;
+    const blockBeforeExplain = hasExplain ? block.slice(0, explainIdx) : block;
+    const explain = hasExplain ? block.slice(explainIdx + 3).trim() : '';
+
+    const lines = blockBeforeExplain.split('\n').map(l => l.trim()).filter(Boolean);
     const answerLine = lines.find(l => l.startsWith('答案：'));
-    const explainLine = lines.find(l => l.startsWith('解析：'));
     const answerStr = answerLine?.replace('答案：', '').trim() || '';
-    const explain = explainLine?.replace('解析：', '').trim() || '';
 
     if (type === 'judgment') {
       const question = lines.find(l => !l.startsWith('答案：') && !l.startsWith('解析：'));

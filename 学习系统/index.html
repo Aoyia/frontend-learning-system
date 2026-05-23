@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="data:," />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <title>前端知识学习系统</title>
   <script>
     (function () {
@@ -149,6 +150,51 @@
       color: var(--accent);
       margin-right: 16px;
       white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-logo-img {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .nav-logo-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .logo-fly-text {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--success);
+      text-shadow: 0 0 6px rgba(72, 187, 120, 0.4);
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 10;
+      animation: flyUpAndFade 0.9s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    }
+    @keyframes flyUpAndFade {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, 5px) scale(0.6);
+      }
+      30% {
+        opacity: 1;
+        transform: translate(-50%, -10px) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -35px) scale(0.9);
+      }
     }
     .nav-tabs { display: flex; gap: 4px; }
     .nav-actions {
@@ -188,6 +234,38 @@
     .main { flex: 1; display: flex; overflow: hidden; height: calc(100vh - 56px); position: relative; }
 
     /* ========== SIDEBAR ========== */
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .sidebar-logo img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .sidebar-logo-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .sidebar-logo-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sidebar-logo-sub {
+      font-size: 11px;
+      color: var(--text2);
+      white-space: nowrap;
+    }
     .sidebar {
       width: 260px;
       min-width: 260px;
@@ -197,7 +275,7 @@
       scrollbar-gutter: stable;
       scrollbar-width: thin;
       scrollbar-color: transparent transparent;
-      padding: 16px 0;
+      padding-bottom: 16px;
     }
     .sidebar.is-scrolling {
       scrollbar-color: var(--border) transparent;
@@ -880,6 +958,7 @@
       height: 100%;
       transform: rotate(-90deg);
       z-index: 1;
+      overflow: visible;
     }
     .pet-aura-ring-bg {
       fill: none;
@@ -2098,7 +2177,6 @@
     .quiz-option-content {
       min-width: 0;
       flex: 1;
-      white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
     .quiz-option-content p { margin: 0; }

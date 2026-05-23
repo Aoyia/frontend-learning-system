@@ -3,15 +3,7 @@ import { gsap } from 'gsap';
 import { PET_STAGES, getPetView } from '../utils/pet.js';
 import { PetAuraBg } from './PetAuraBg.jsx';
 
-// 各境界对应的爆发光色
-const REALM_BURST_COLOR = {
-  '启灵': 'rgba(255, 71, 87,',
-  '炼气': 'rgba(255, 127, 80,',
-  '筑基': 'rgba(241, 196, 15,',
-  '结丹': 'rgba(46, 204, 113,',
-  '元婴': 'rgba(52, 152, 219,',
-  '化神': 'rgba(155, 89, 182,',
-};
+
 
 const LADDER_STAGES = [
   { label: '启灵', minIndex: 0 },
@@ -35,14 +27,11 @@ export function PetPanel({ petState, petEvents, onClose }) {
   const fillProgress = isPreviewing ? 100 : view.progress;
   const strokeOffset = strokeDash - (strokeDash * fillProgress) / 100;
 
-  // ── 境界切换爆发动画 ────────────────────────────────────
-  const burstRef   = useRef(null);
   const prevRealm  = useRef(null);
   const panelRef   = useRef(null);
 
   useEffect(() => {
     const realm = displayStage.realm;
-    // 首次挂载不触发
     if (prevRealm.current === null) {
       prevRealm.current = realm;
       return;
@@ -50,37 +39,13 @@ export function PetPanel({ petState, petEvents, onClose }) {
     if (prevRealm.current === realm) return;
     prevRealm.current = realm;
 
-    const burst = burstRef.current;
     const panel = panelRef.current;
-    if (!burst || !panel) return;
-
-    const col = REALM_BURST_COLOR[realm] ?? 'rgba(255,255,255,';
-
-    // 整个面板：轻微震颤
-    gsap.fromTo(panel,
-      { x: -6 },
-      { x: 0, duration: 0.35, ease: 'elastic.out(1, 0.3)' }
-    );
-
-    // 爆发白光：扩散 → 消散
-    gsap.set(burst, {
-      opacity: 0,
-      scale: 0.4,
-      background: `radial-gradient(circle, ${col} 0.9) 0%, ${col} 0.4) 40%, transparent 75%)`,
-    });
-    gsap.timeline()
-      .to(burst, {
-        opacity: 1,
-        scale: 1.6,
-        duration: 0.18,
-        ease: 'power3.out',
-      })
-      .to(burst, {
-        opacity: 0,
-        scale: 2.4,
-        duration: 0.45,
-        ease: 'power2.in',
-      });
+    if (panel) {
+      gsap.fromTo(panel,
+        { x: -6 },
+        { x: 0, duration: 0.35, ease: 'elastic.out(1, 0.3)' }
+      );
+    }
   }, [displayStage.realm]);
 
   return (
@@ -127,14 +92,13 @@ export function PetPanel({ petState, petEvents, onClose }) {
             <span className="pet-preview-badge">✨ 预览境界形态</span>
           )}
 
-          {/* 境界切换爆发光层（绝对定位，覆盖在展示区上方） */}
-          <div ref={burstRef} className="pet-realm-burst" aria-hidden="true" />
+
 
           <div className="pet-zenith-avatar-wrapper">
             {/* 境界背景光效 —— 在宠物最底层 */}
             <PetAuraBg realm={displayStage.realm} />
             {/* SVG 聚灵修为圆环 */}
-            <svg className="pet-aura-ring" viewBox="0 0 160 160">
+            <svg className="pet-aura-ring" viewBox="0 0 160 160" style={{ overflow: 'visible' }}>
               <circle className="pet-aura-ring-bg" cx="80" cy="80" r={radius} />
               <circle
                 className="pet-aura-ring-fill"
@@ -145,7 +109,12 @@ export function PetPanel({ petState, petEvents, onClose }) {
                 strokeDashoffset={strokeOffset}
               />
             </svg>
-            <img className="pet-zenith-avatar" src={displayStage.image} alt={displayStage.name} />
+            <img
+              key={displayStage.index}
+              className="pet-zenith-avatar"
+              src={displayStage.image}
+              alt={displayStage.name}
+            />
           </div>
 
           {/* 扁平化数据属性 */}

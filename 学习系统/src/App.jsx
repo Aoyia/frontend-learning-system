@@ -72,6 +72,92 @@ function App() {
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   const contentRef = useRef(null);
+  const logoImgRef = useRef(null);
+  const logoSpeedRef = useRef(0);
+  const [flyEffects, setFlyEffects] = useState([]);
+
+  useEffect(() => {
+    const logo = logoImgRef.current;
+    if (!logo) return;
+
+    let angle = 0;
+    let isHovered = false;
+    let frameId = null;
+
+    const handleMouseEnter = () => { isHovered = true; };
+    const handleMouseLeave = () => { isHovered = false; };
+
+    logo.addEventListener('mouseenter', handleMouseEnter);
+    logo.addEventListener('mouseleave', handleMouseLeave);
+
+    const update = () => {
+      if (isHovered) {
+        logoSpeedRef.current = Math.min(logoSpeedRef.current + 0.45, 25);
+      } else {
+        logoSpeedRef.current = Math.max(logoSpeedRef.current - 0.18, 0);
+      }
+
+      if (logoSpeedRef.current > 0) {
+        angle = (angle + logoSpeedRef.current) % 360;
+        logo.style.transform = `rotate(${angle}deg)`;
+
+        if (logoSpeedRef.current > 8) {
+          const intensity = Math.min((logoSpeedRef.current - 8) / 1.5, 10);
+          logo.style.filter = `drop-shadow(0 0 ${intensity}px rgba(76, 175, 80, 0.9))`;
+        } else {
+          logo.style.filter = 'none';
+        }
+      } else {
+        logo.style.filter = 'none';
+        // 自动平滑对齐摆正
+        if (!isHovered && angle !== 0) {
+          const targetAngle = angle > 180 ? 360 : 0;
+          const diff = targetAngle - angle;
+          if (Math.abs(diff) < 0.5) {
+            angle = 0;
+            logo.style.transform = 'rotate(0deg)';
+          } else {
+            angle += diff * 0.16; // 阻尼回位缓动
+            logo.style.transform = `rotate(${angle}deg)`;
+          }
+        }
+      }
+
+      frameId = requestAnimationFrame(update);
+    };
+
+    frameId = requestAnimationFrame(update);
+
+    return () => {
+      logo.removeEventListener('mouseenter', handleMouseEnter);
+      logo.removeEventListener('mouseleave', handleMouseLeave);
+      cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  const CULTIVATION_MEMES = [
+    '参天造化露 +1',
+    '法力运转加速！',
+    '修为松动！',
+    '以学代修，突破！',
+    '注入前端灵力！',
+    '灵气暴走！',
+    '筑基近在咫尺！',
+    '道友，代码熟了！',
+    '炼丹中，勿扰！',
+    '前端金丹 +1'
+  ];
+
+  function handleLogoPractise() {
+    logoSpeedRef.current = Math.min(logoSpeedRef.current + 22, 65);
+    const text = CULTIVATION_MEMES[Math.floor(Math.random() * CULTIVATION_MEMES.length)];
+    const id = Math.random().toString(36).substring(2, 9);
+    setFlyEffects(prev => [...prev, { id, text }]);
+    setTimeout(() => {
+      setFlyEffects(prev => prev.filter(item => item.id !== id));
+    }, 900);
+  }
+
 
   const currentModule = useMemo(
     () => LEARNING_CONTENT.modules.find(m => m.id === currentModuleId) || null,
@@ -470,7 +556,15 @@ function App() {
         </div>
       )}
       <nav className="nav">
-        <div className="nav-logo">⚡ 前端知识库</div>
+        <div className="nav-logo">
+          <div className="nav-logo-wrapper" onClick={handleLogoPractise}>
+            <img src="/logo.png" alt="Logo" className="nav-logo-img" ref={logoImgRef} />
+            {flyEffects.map(effect => (
+              <span key={effect.id} className="logo-fly-text">{effect.text}</span>
+            ))}
+          </div>
+          前端知识库
+        </div>
         <div className="nav-tabs">
           {PAGES.map(name => (
             <button key={name} className={`nav-tab ${activeNavPage === name ? 'active' : ''}`} onClick={() => setRoute(name)}>

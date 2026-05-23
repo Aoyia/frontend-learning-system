@@ -3,7 +3,7 @@ import { marked } from 'marked';
 
 export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answered, onToggleOption, onReadChapter }) {
   const typeLabel = question.type === 'single' ? '单选' : question.type === 'multiple' ? '多选' : '判断';
-  const renderOptionMarkdown = text => ({ __html: marked.parse(text || '') });
+  const renderOptionMarkdown = text => ({ __html: marked.parse(text || '').trim() });
 
   return (
     <div className="quiz-question" id={`qq-${globalIdx}`}>

@@ -2,3 +2,7 @@ node_modules/
 dist/
 学习系统/node_modules/
 学习系统/dist/
+
+# Private local interview prep content. Do not publish to the public repository.
+面试准备资料/
+学习系统/docs/博客文档/项目准备/

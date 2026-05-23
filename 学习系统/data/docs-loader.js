@@ -8,6 +8,7 @@
  * difficulty: 困难 | 进阶 | 入门
  * tags: [vue, reactivity]
  * module: vue          ← 决定归属哪个模块（必填）
+ *         project-prep ← 项目面试准备资料
  * sourceType: blog     ← blog | note | official | original
  * sourceTitle: 原博客或原笔记标题
  * sourceUrl: 原文链接
@@ -65,6 +66,12 @@ const MODULE_CONFIGS = {
     name: '性能优化专项',
     icon: '⚡',
     desc: 'Core Web Vitals、渲染性能、包体积优化、网络优化，性能面试系统复盘。',
+  },
+  'project-prep': {
+    id: 'project-prep-special',
+    name: '项目面试准备',
+    icon: '🧭',
+    desc: '项目深挖、技术亮点、证据卡、STAR 表达和腾讯中高级前端追问训练。',
   },
   scenarios: {
     id: 'scenarios-special',
@@ -242,7 +249,7 @@ function buildModulesFromDocs(docsMap) {
     })
     .sort((a, b) => {
       // 保持固定顺序
-      const order = ['vue', 'engineering', 'performance', 'scenarios'];
+      const order = ['vue', 'engineering', 'performance', 'project-prep', 'scenarios'];
       return order.indexOf(a.id.replace('-special', '')) - order.indexOf(b.id.replace('-special', ''));
     });
 }

@@ -27,6 +27,7 @@ Read `references/project-guide.md` before editing content.
    - Put broad foundation topics in `技术破冰` when they can become a map node with multiple downstream concepts.
    - Put narrower or applied topics in `学习系统/data` under the nearest semantic deep-learning module.
    - Put user-provided blogs, article drafts, Markdown notes, and pasted long technical answers in `学习系统/docs/博客文档/<中文模块>/` unless they are broad enough to become a new semantic JS module.
+   - Put personal project interview prep, project deep-dive notes, interview answer packs, and company-specific project追问资料 in `学习系统/docs/博客文档/项目准备/` with `module: project-prep`.
    - Convert provided questions into structured quiz items and attach them to the closest learning document.
    - For a short technical question, answer it first; only update project content if the user asks to learn, remember, expand, or add it.
    - For a full blog/article/Markdown paste, assume the user wants it added to the document library unless they explicitly say "只回答", "只解释", "不要入库", or equivalent.

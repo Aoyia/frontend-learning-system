@@ -506,7 +506,7 @@ html[data-immersive="true"] .md-body { font-size: 16px; line-height: 2; }
 .quiz-options { display: flex; flex-direction: column; gap: 10px; }
 .quiz-option {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 10px 14px;
   background: var(--surface2);
@@ -539,8 +539,28 @@ html[data-immersive="true"] .md-body { font-size: 16px; line-height: 2; }
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.quiz-option-content p {
-  margin: 0;
+.quiz-option-content p { margin: 0; }
+.quiz-option-content code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--code-bg);
+  color: var(--code-text);
+  font-size: .92em;
+}
+.quiz-option-content pre {
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--code-text);
+  overflow-x: auto;
+  white-space: pre;
+}
+.quiz-option-content pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
 }
 .quiz-explain {
   margin-top: 14px;

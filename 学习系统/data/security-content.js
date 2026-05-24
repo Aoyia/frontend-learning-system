@@ -59,7 +59,7 @@ preview.textContent = userInput
       deepDive: '必须深入。前端安全是客户信任和合规底线。深入顺序是浏览器执行上下文、输出编码、DOM XSS、CSP、Trusted Types、第三方脚本和供应链。',
       references: ['OWASP XSS Prevention Cheat Sheet', 'MDN Content Security Policy', 'MDN Trusted Types API', 'DOMPurify 官方文档'],
       quiz: [
-        single('XSS 的本质是？', ['不可信内容被当作代码执行', '图片太大', '接口太慢', 'CSS 权重太高'], 0, `💡 它解决了什么问题：
+        single('跨站脚本攻击（XSS）的核心安全本质是：', ['浏览器将未经安全净化、不可信的用户输入数据，误作为合法的可执行代码进行解析并执行。', '攻击者利用网络劫持，向客户端静默注入了超过最大体积限制的加密资源包。', '本地 Cookie 凭证未配置相同源策略限制，被第三方站点通过 iframe 强制读取。', '前端打包脚本未能正确执行 Tree Shaking，导致无用的死代码在宿主环境意外运行。'], 0, `💡 它解决了什么问题：
 解决了前端安全防护中“只在输入端过滤”的被动缺陷。如果不明白XSS是数据进入可执行上下文导致的，开发者会陷入“手写正则过滤特殊字符”的死胡同，攻击者可以通过多重编码、非预期字符集绕过，导致严重的身份盗用与恶意脚本执行。
 
 🔍 核心原理解析（防拷打）：
@@ -80,7 +80,7 @@ preview.textContent = userInput
 1. React 的安全设计：在普通 JSX 渲染中，React 默认会将动态字符串作为 textContent 处理，阻断了 HTML 标签的解析与执行。
 2. 危险的隐门：dangerouslySetInnerHTML 的底层是原生 innerHTML。React 对此不进行任何默认转义，如果直接将后端或未处理的输入赋值给它，浏览器就会解析并执行其中的 script 或事件属性（如 <img src=x onerror=...>），引发严重的 DOM XSS。
 3. 进一步拓展大厂面试追问：如果业务必须要用 dangerouslySetInnerHTML 渲染富文本，应如何做防护？必须在将 HTML 字符串传递给 React 之前，使用 DOMPurify 执行过滤，并结合配置 Trusted Types（可信类型）限制原生 DOM sink 只能接收经 Sanitizer 审查过的可信对象，拒绝任何普通字符串输入。`),
-        single('Trusted Types 主要约束什么？', ['危险 DOM sink 的输入', '图片尺寸', 'HTTP 缓存', 'Git 分支'], 0, `💡 它解决了什么问题：
+        single('现代浏览器引入 Trusted Types API，其主要安全防护抓手是约束：', ['导致 DOM XSS 的危险 Sink API（如 innerHTML、eval 等）的参数输入，强制其使用经过校验的类型安全对象。', '前端应用通过 Fetch API 向不受信任的第三方镜像源发起数据请求。', 'HTTP 协议在建立传输握手时，对静态资源强缓存时间策略的拦截行为。', '本地存储（localStorage）在进行跨站隔离时，由宿主环境自动添加的密匙前缀。'], 0, `💡 它解决了什么问题：
 解决了通过传统代码评审和静态分析（ESLint）极难防御“DOM 型 XSS 漏洞”的痛点。Trusted Types 强制从浏览器引擎底层规范可写入危险 DOM Sink（如 innerHTML、eval）的参数类型，杜绝了无意的危险赋值。
 
 🔍 核心原理解析（防拷打）：
@@ -94,7 +94,7 @@ preview.textContent = userInput
 1. 原理剖析：内容安全策略（CSP）是由服务端在响应头中下发的安全指令集（如 Content-Security-Policy: default-src 'self'）。
 2. 浏览器加载页面后，会严格拦截不符合策略的资源加载与脚本执行。例如，默认禁止执行 eval()、禁止执行内联的 script、并且禁止从策略外定义的域名下载静态资源。
 3. 进一步拓展大厂面试追问：如果应用本身有大量历史遗留内联脚本，无法在慢速迭代中完全改造成外部 JS 文件，应当如何在不设置 'unsafe-inline' 的情况下安全放行？可以使用 'strict-dynamic' 配合 nonce 的 CSP 策略。在每次渲染页面时，服务端动态生成一串随机的 Cryptographic Nonce 传给合法的内联脚本，并限制只有携带相同 nonce 属性的脚本才能被运行。`),
-        single('富文本安全最不推荐的是？', ['手写正则过滤所有危险 HTML', '使用成熟 sanitizer', '限制允许标签', '限制 URL 协议'], 0, `💡 它解决了什么问题：
+        single('在处理富文本编辑器输出的 HTML 安全清洗时，以下哪种防护方案最不推荐且极易产生漏防？', ['编写自定义的正则表达式来手动过滤和剔除危险标签及属性。', '引入业界成熟的 Sanitizer 清洗库（如 DOMPurify）执行上下文感知清洗。', '采用严格的白名单机制，限制富文本中允许渲染的 HTML 标签种类。', '对富文本内部的 a 标签超链接执行 URL 协议方案（如阻断 javascript:）校验。'], 0, `💡 它解决了什么问题：
 解决了团队出于炫技或嫌麻烦而尝试手写正则表达式去过滤 HTML 中危险标签的愚蠢做法。由于 HTML 语法的极端复杂性、容错机制以及浏览器的兼容特性，手写正则会带来大量容易被绕过的漏洞，给系统安全留下致命隐患。
 
 🔍 核心原理解析（防拷打）：
@@ -149,7 +149,7 @@ Set-Cookie: session=abc; HttpOnly; Secure; SameSite=Lax; Path=/
       deepDive: '值得深入。登录态安全牵涉浏览器、服务端、网关和产品交互。深入顺序是 Cookie 属性、CSRF、CORS、Token 存储、会话续期和敏感操作保护。',
       references: ['OWASP CSRF Prevention Cheat Sheet', 'MDN Set-Cookie', 'MDN SameSite Cookies', 'MDN CORS'],
       quiz: [
-        single('CSRF 主要利用浏览器什么行为？', ['自动携带目标站点 Cookie', '自动压缩图片', '自动执行 TS', '自动生成接口'], 0, `💡 它解决了什么问题：
+        single('跨站请求伪造（CSRF）攻击得以成功的根源，主要利用了浏览器的哪项默认行为？', ['跨站发起 HTTP 请求时，浏览器会自动在请求头中携带该目标域名下未过期的 Cookie 凭证。', '浏览器在渲染 DOM 节点时，会自动解压并解析包含脚本段的图片元数据。', '在执行 TypeScript 脚本编译时，浏览器在后台静默开启的自动接口同步机制。', '对包含第三方资源的 iframe 容器执行无视同源策略的安全沙箱豁免。'], 0, `💡 它解决了什么问题：
 解决了在没有进行跨站防护时，黑客钓鱼网站能诱导已登录用户发起“越权恶意操作”的隐性安全漏洞。它揭示了浏览器管理凭证的天然信任机制在跨站环境下可能成为攻击武器的问题。
 
 🔍 核心原理解析（防拷打）：
@@ -170,7 +170,7 @@ Set-Cookie: session=abc; HttpOnly; Secure; SameSite=Lax; Path=/
 1. 功能职责：HttpOnly 是 Cookie 的一个安全标志。标记后，浏览器会切断 JS 的 'document.cookie' 对该字段的读取与修改权限。
 2. 但它并未改变浏览器的请求发送机制：只要用户发起属于该 Domain 的 HTTP 请求，浏览器依然会忠实地把该 HttpOnly Cookie 填入 Header 中。因此，虽然 XSS 无法读取它，但跨站页面发起的 CSRF 请求依然能够携带它。
 3. 进一步拓展大厂面试追问：在大厂多系统协作中，如果一个子域的子应用确实需要读取 Cookie 中的某些非敏感用户信息（如用户名），但又想保护 SessionID 不被窃取，如何设计？应采用“Cookie 分轨治理”。将 SessionID 存在带有 HttpOnly; Secure; SameSite=Lax 的敏感 Cookie 中；而将非敏感的用户昵称、偏好存放在另一个不带 HttpOnly 的普通 Cookie 中。`),
-        single('Secure Cookie 表示？', ['只通过 HTTPS 等安全通道发送', '永不过期', '可被任意 JS 读取', '只能本地使用'], 0, `💡 它解决了什么问题：
+        single('Cookie 的 Secure 属性在网络安全防护中的具体表征是：', ['限制该 Cookie 必须仅在加密信道（如 HTTPS）中才能被浏览器附带并发送给服务端。', '强制设定 Cookie 的过期时间与主应用会话解绑，保证凭证永不过期。', '允许浏览器端脚本（如 document.cookie）直接读取并对其值进行安全加密。', '限制该凭证只能在 localhost 或本地局域网（127.0.0.1）的调试阶段使用。'], 0, `💡 它解决了什么问题：
 解决了敏感会话凭证（如 Session Cookie）在非加密的 HTTP 信道中传输时，容易被中间人（MITM）进行网络监听和嗅探（Packet Sniffing）而导致身份被轻易窃取的致命安全隐患。
 
 🔍 核心原理解析（防拷打）：
@@ -184,7 +184,7 @@ Set-Cookie: session=abc; HttpOnly; Secure; SameSite=Lax; Path=/
 1. 作用域解析：'Domain' 决定了 Cookie 可以在哪些域名下访问（如设置为 .domain.com 可用于所有子域名，若省略则只适用于当前精确域名）。
 2. 'Path' 控制在域名的哪些路由路径下生效（如 /api）。'SameSite' 控制跨站请求（Cross-site）时的携带逻辑（Strict/Lax/None），切断不必要的跨站凭证流通。
 3. 进一步拓展大厂面试追问：如果一个网站的 domain 被误设为公共后缀（Public Suffix，如 .com 或 .co.uk），会发生什么？浏览器会直接拒绝写入该 Cookie，以防止任何不相关的站点窃取或伪造同后缀下的共享会话。在配置 Domain 时，前端与网关必须严格限制为项目的精确根域名。`),
-        single('删除订单这类操作最不应该使用？', ['GET', 'POST/DELETE 并鉴权', 'CSRF Token', 'Origin 校验'], 0, `💡 它解决了什么问题：
+        single('在设计“删除订单”等具有副作用的敏感接口时，以下哪种做法最不安全、最容易遭受 CSRF 攻击？', ['使用无状态且幂等的 GET 请求方法来承载删除操作。', '使用 POST 或 DELETE 方法，并对请求执行二次签名与鉴权校验。', '在请求体或自定义 Header 中附带随机生成的 CSRF Token 进行校验。', '结合 Origin 和 Referer 头部对请求源进行严格的同源策略审查。'], 0, `💡 它解决了什么问题：
 解决了在 Web 语义设计不规范时带来的破坏性风险。如果使用 GET 承载有副作用的写/删操作，不仅会导致攻击者通过一个简单的 img 标签（如 <img src="delete-api">）触发 CSRF，还会导致网络爬虫、预加载引擎在无意抓取中把用户数据删光的灾难。
 
 🔍 核心原理解析（防拷打）：
@@ -240,7 +240,7 @@ const secret = import.meta.env.VITE_SERVER_SECRET
       deepDive: '必须深入。供应链安全直接影响公司资产和客户数据。深入顺序是依赖治理、CI 凭证、环境变量、第三方脚本、sourcemap、SRI、SBOM 和发布权限。',
       references: ['OWASP Software Supply Chain Security', 'npm audit 文档', 'MDN Subresource Integrity', 'Vite Env Variables 文档'],
       quiz: [
-        single('为什么不能把服务端密钥放进前端环境变量？', ['前端产物会暴露给用户', '会让 CSS 失效', '会减少题目数量', '会阻止路由'], 0, `💡 它解决了什么问题：
+        single('在前端工程化实践中，严禁将服务端的敏感密钥（如数据库密码、私钥等）配置进前端环境变量，其根本原因在于：', ['前端环境变量在构建打包时会被静态字符串替换，最终产物以明文形式向所有访问用户公开暴露。', '构建工具在做 AST 分析时，引入复杂私钥会导致编译出的 CSS 语法结构大面积失效。', '浏览器运行时会自动对 import.meta.env 中的长字符串变量进行校验，从而强行阻断单页路由跳转。', '私有密匙会直接触发服务端网关的混淆限制，导致 Staging 环境中的 CDN 资源回源超时。'], 0, `💡 它解决了什么问题：
 纠正了对构建时“环境变量”的认知盲区，防止团队把包含微信支付 Secret、私有部署 Token 等真正的服务器敏感密钥硬编码到 Vite/Webpack 环境变量中，导致构建产物发布后，任何用户通过浏览器调试面板即可轻松提取密钥并盗取公司资产。
 
 🔍 核心原理解析（防拷打）：
@@ -261,7 +261,7 @@ const secret = import.meta.env.VITE_SERVER_SECRET
 1. 机制解析：Git 是一个分布式版本控制系统，其设计的核心在于记录每一次变更的完整历史（History Commit）。
 2. 在最新的 commit 里删除一行代码，该密钥依然明文保存在上一个 commit 的对象中。只要黑客克隆仓库或通过 API 查看历史 commit，就能轻松还原密钥。
 3. 进一步拓展大厂面试追问：如果密钥已经不小心推送到公共 GitHub 仓库中，除了轮换密钥外，在 Git 仓库侧应该如何做物理清除？需要使用特殊的强力清理工具（如 git-filter-repo 或 BFG Repo-Cleaner）改写整个 Git 的树形历史，物理擦除包含敏感信息的历史 commit，并执行强制推（git push --force）覆盖远程仓库，但首要工作依然是立即在服务提供商侧吊销并轮换密钥。`),
-        single('SRI 的主要作用是？', ['校验第三方资源完整性', '提高 TS 编译速度', '替代登录', '压缩图片'], 0, `💡 它解决了什么问题：
+        single('子资源完整性（SRI）在现代 Web 安全架构中的主要作用是：', ['校验加载的第三方托管 CDN 资源是否被恶意篡改或劫持，保障代码加载的真实性。', '利用浏览器多线程特性加速大型 TypeScript 文件在编译阶段的类型解析。', '在用户会话过期时，自动拦截 HTTP 请求以作为无感双 Token 登录续期。', '在图片资源解析阶段通过硬件加速提高各种高分辨率图像的压缩与解码速率。'], 0, `💡 它解决了什么问题：
 解决了在使用第三方 CDN 托管静态脚本时，由于 CDN 边缘节点、缓存服务器或源站被入侵修改而导致客户端在无感知中加载运行“篡改后的投毒 JS 脚本”的严重安全事故。
 
 🔍 核心原理解析（防拷打）：
@@ -275,7 +275,7 @@ const secret = import.meta.env.VITE_SERVER_SECRET
 1. 权限治理体系：首要原则是“最小权限原则（Principle of Least Privilege）”，CI 凭证应只能读写其负责的特定仓库和制品库，绝不配置全局 Admin 权限。
 2. 其次，CI/CD 系统必须配置自动化的日志脱敏（Log Masking），防止由于调试日志输出或异常抛出导致凭证被打印到公开的流水线面板中。
 3. 进一步拓展大厂面试追问：在 GitHub Actions 等公共 CI 平台中，如何防范恶意 PR 修改了 workflow 配置文件从而把 secrets 打印出来的供应链风险？应该限制“来自 Fork 的 PR”在默认情况下没有写权限，并在合并到主干前，workflow 的修改必须通过管理员的人工审核。`),
-        single('postinstall 风险来自哪里？', ['安装阶段能执行依赖包脚本', '只能修改 README', '只能压缩 CSS', '不能运行代码'], 0, `💡 它解决了什么问题：
+        single('在 NPM 包管理器生态下，postinstall 等生命周期脚本所带来的供应链安全隐患在于：', ['包在安装阶段被默认执行其自定义脚本，可在本地开发机或 CI 流水线上执行越权恶意命令。', '仅限制于对本地项目的 README.md 文档进行无授权的文字追加与格式篡改。', '打包工具在执行 Tree Shaking 时会自动将其作为无副作用（sideEffects）文件整体过滤。', '它会拦截所有的 npm lifecycle 事件，导致本地项目依赖图谱完全处于不可读取状态。'], 0, `💡 它解决了什么问题：
 解决了在依赖包安装阶段，由于对 npm 脚本生命周期的无感知，导致本地开发机或构建服务器在执行 npm install 时自动运行恶意投毒脚本、窃取环境变量与本地代码的工程隐患。
 
 🔍 核心原理解析（防拷打）：

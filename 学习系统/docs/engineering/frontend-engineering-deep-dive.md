@@ -275,10 +275,10 @@ D. 全局 polyfill 修改了 Array.prototype
 
 ### Q5 [single]
 Vite 的 HMR 速度比 Webpack 快的核心原因是？
-A. Vite 使用了更快的网络协议
-B. Vite 只需重新编译变化的单个模块，不需要重新打包整个 chunk
-C. Vite 禁用了 source map 所以更快
-D. Vite 把 HMR 逻辑放在了 Service Worker 中
+A. Vite 使用了底层的 HTTP/3 协议并行推送资源
+B. Vite 只需重新编译当前发生变动的单个模块，基于原生 ESM 按需拉取，无需重新组装和打包整个 Chunk 依赖链
+C. Vite 通过预先在服务端生成静态文件索引列表避开了网络往返检查
+D. Vite 在开发环境禁用了 AST 解析并直接依靠正则匹配模块依赖
 答案：B
 解析：
 💡 它解决了什么问题：

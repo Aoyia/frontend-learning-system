@@ -668,10 +668,10 @@ D. 强制将 provides 实例注册为只读 Proxy 以提升响应式检索速度
 
 ### Q5 [single]
 在 Vue 3 中，`inject` 查找依赖时使用 `key in provides` 而不是 `hasOwnProperty` 的关键原因是？
-A. `in` 可以沿原型链查找
-B. `in` 会自动创建默认值
-C. `in` 可以让普通值变成 ref
-D. `hasOwnProperty` 不能判断字符串 key
+A. `in` 运算符可以沿原型链（Prototype Chain）继承关系定位祖先组件提供的同名数据
+B. `in` 运算符能够支持响应式代理（Proxy）上的 `has` 捕获器，实现依赖调度的追踪
+C. `hasOwnProperty` 会由于组件实例的解构而丢失对上层原型链上共享状态的感知
+D. 避免在依赖对象为空（`null`）或未定义时触发 `Object.prototype` 属性缺失的运行时异常
 答案：A
 解析：
 💡 它解决了什么问题：

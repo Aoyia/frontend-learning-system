@@ -491,10 +491,10 @@ D. 使用了 Web Worker 在后台渲染
 
 ### Q7 [single]
 在 JavaScript 中手写实现 LRU（最近最少使用）缓存时，使用 `Map` 替代普通 Object 的关键优势是利用了 Map 的什么特性？
-A. Map 的键可以是任意类型
+A. Map 的键可以是任意类型，避开了对键的强制字符串序列化转换
 B. Map 的迭代顺序与插入顺序一致，可以通过 keys().next().value 获取最久未使用的键
-C. Map 比 Object 占用更少内存
-D. Map 的 get/set 操作时间复杂度是 O(log n)
+C. Map 的 delete 删键操作不会导致 V8 引擎内部发生隐藏类（Hidden Class）降级或字典模式退化
+D. Map 底层哈希表在发生碰撞时能够通过红黑树结构实现 O(1) 的常数级查找性能
 答案：B
 解析：
 💡 它解决了什么问题：

@@ -358,8 +358,8 @@ D. flush: 'post'
 在 queueJob 的手写实现中，队列使用 'Set' 而不是 'Array' 的原因是？
 A. Set 的 forEach 更快
 B. Set 自动对相同引用的 job 去重，确保同一轮同步中同一个 job 只执行一次
-C. Array 不能存放函数
-D. Set 支持异步迭代
+C. Array 的 indexOf 在多任务高频检索时的 O(n) 开销会阻塞微任务执行
+D. Set 可以在底层利用 C++ 级别的硬件缓存优化迭代性能
 答案：B
 解析：
 💡 它解决了什么问题：

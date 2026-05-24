@@ -642,8 +642,8 @@ D. 当前 app 的 `config.globalProperties`
 在 Vue 3 中，某组件第一次调用 `provide` 时，Vue 为什么要执行 `Object.create(parentProvides)`？
 A. 为了深拷贝父组件提供的所有值
 B. 为了创建自己的 provides，同时通过原型链继承父级 provides
-C. 为了把父组件 provides 清空
-D. 为了让所有 inject 都变成异步
+C. 为了强行切断与祖先组件原型链的关联以防范样式污染
+D. 强制将 provides 实例注册为只读 Proxy 以提升响应式检索速度
 答案：B
 解析：
 💡 它解决了什么问题：

@@ -305,8 +305,8 @@ D. 浅层追踪 + 手动刷新
 Vue 3.5 中 `computed` 改用 version counting 替代单纯的 dirty flag，主要解决什么问题？
 A. 减少 Proxy 创建数量
 B. 避免多层 computed 嵌套时不必要的 getter 重新执行
-C. 让 computed 支持异步 getter
-D. 让 computed 可以有多个返回值
+C. 实现对计算属性底层依赖 Link 双向关联节点的动态销毁
+D. 绕过微任务队列，强制以同步宏任务形式执行数据合并
 答案：B
 解析：
 💡 它解决了什么问题：

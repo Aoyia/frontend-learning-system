@@ -199,9 +199,9 @@ D. Git 提交太多
 判断内存泄漏时，为什么不能只看 JS heap size 短时间上涨？
 
 A. 因为浏览器可能还没有触发 GC
-B. 因为 JS 没有内存概念
-C. 因为 DevTools 不能打开
-D. 因为 CSS 会覆盖 JS
+B. 因为 V8 引擎对新晋代内存采用了全停顿（Stop-The-World）算法
+C. 因为 Chrome 无法追踪主线程以外的微任务（Microtasks）内存开销
+D. 因为强引用（Strong Reference）在退出执行上下文时会被隐式销毁
 
 答案：A
 

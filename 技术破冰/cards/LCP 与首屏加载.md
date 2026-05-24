@@ -142,8 +142,8 @@ D. 提前发现关键资源
 LCP 图片下载完但迟迟不显示，优先怀疑什么？
 
 A. render delay，例如 CSS、JS、字体或客户端渲染阻塞
-B. npm 包名
-C. Git 分支名
-D. README 目录
+B. 浏览器的网络请求排队（Queueing）时间过长
+C. 服务端响应没有正确设置 Content-Disposition 响应头
+D. TCP 连接握手时发生丢包重传
 
 答案：A

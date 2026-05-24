@@ -10,7 +10,7 @@ export function Home({ progressCache, petState, onOpenPet, onOpenRoadmap, onOpen
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-1 mx-0 mb-7.5">
         <button
-          className="min-h-[126px] border border-border rounded-xl bg-surface text-text p-4.5 text-left cursor-pointer grid gap-2 transition-all duration-200 hover:border-primary hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(108,99,255,0.14)] border-secondary/45 bg-gradient-to-br from-secondary/12 to-primary/8"
+          className="min-h-[126px] border border-secondary/45 rounded-xl bg-gradient-to-br from-secondary/12 to-primary/8 text-text p-4.5 text-left cursor-pointer grid gap-2 transition-all duration-200 hover:border-primary hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(108,99,255,0.14)]"
           onClick={onOpenRoadmap}
         >
           <span className="text-[26px]">🧭</span>

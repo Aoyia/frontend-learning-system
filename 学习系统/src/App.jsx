@@ -555,19 +555,35 @@ function App() {
           </button>
         </div>
       )}
-      <nav className="sticky top-0 z-[100] h-14 bg-surface border-b border-border px-3 md:px-6 flex items-center gap-2">
-        <div className="text-[14px] md:text-[16px] font-bold text-primary mr-1.5 md:mr-4 whitespace-nowrap flex items-center gap-2">
+      {/* ===== 顶部导航栏：三区布局 [Logo | Tabs | Actions] ===== */}
+      <nav className="sticky top-0 z-[100] h-14 bg-surface border-b border-border flex items-center">
+
+        {/* 左区：Logo */}
+        <div className="shrink-0 flex items-center gap-2 pl-4 md:pl-6 pr-3 md:pr-4">
           <div className="relative flex items-center justify-center cursor-pointer select-none" onClick={handleLogoPractise}>
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-9.5 h-9.5 object-contain shrink-0" ref={logoImgRef} />
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-8 h-8 object-contain" ref={logoImgRef} />
             {flyEffects.map(effect => (
               <span key={effect.id} className="logo-fly-text">{effect.text}</span>
             ))}
           </div>
-          前端知识库
+          <span className="hidden sm:block text-[15px] font-bold text-primary whitespace-nowrap">前端知识库</span>
         </div>
-        <div className="flex gap-1 max-md:overflow-x-auto">
+
+        {/* 分隔线 */}
+        <div className="shrink-0 w-px h-5 bg-border" />
+
+        {/* 中区：导航 Tabs（弹性伸缩，内部可横向滚动） */}
+        <div className="flex-1 min-w-0 overflow-x-auto scrollbar-none flex items-center gap-1 px-2 md:px-3">
           {PAGES.map(name => (
-            <button key={name} className={`px-2.25 md:px-4 py-1.5 rounded-lg cursor-pointer text-[14px] text-text-secondary transition-all duration-200 border-0 bg-transparent hover:bg-surface-alt hover:text-text max-md:whitespace-nowrap ${activeNavPage === name ? 'bg-primary text-white hover:bg-primary-hover' : ''}`} onClick={() => setRoute(name)}>
+            <button
+              key={name}
+              className={`shrink-0 px-3 py-1.5 rounded-lg cursor-pointer text-[13px] md:text-[14px] whitespace-nowrap transition-all duration-200 border-0 font-medium
+                ${activeNavPage === name
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-transparent text-text-secondary hover:bg-surface-alt hover:text-text'
+                }`}
+              onClick={() => setRoute(name)}
+            >
               {name === 'home'
                 ? '首页'
                 : name === 'roadmap'
@@ -582,10 +598,12 @@ function App() {
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center">
+
+        {/* 右区：操作按钮组 */}
+        <div className="shrink-0 flex items-center gap-1.5 pr-4 md:pr-6 pl-2">
           <PetWidget petState={petState} onOpen={() => setPetPanelOpen(true)} />
           <button
-            className="px-2.5 md:px-3 py-1.5 rounded-lg border border-border bg-surface-alt text-text text-[12px] md:text-[13px] cursor-pointer transition-all duration-200 whitespace-nowrap hover:border-primary hover:text-primary"
+            className="w-9 h-9 flex items-center justify-center rounded-lg border border-border bg-surface-alt text-[16px] cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary"
             onClick={toggleTheme}
             title="切换白天/夜间模式"
           >

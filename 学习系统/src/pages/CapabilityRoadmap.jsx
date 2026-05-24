@@ -72,8 +72,8 @@ export function CapabilityRoadmap({
   }
 
   return (
-    <div className="max-w-[1180px] mx-auto grid gap-6.5">
-      <section className="flex max-md:flex-col items-end max-md:items-stretch justify-between gap-6 py-4.5 px-0 pb-2 border-b border-border">
+    <div className="max-w-[1180px] mx-auto grid gap-9">
+      <section className="flex max-md:flex-col items-end max-md:items-stretch justify-between gap-6 py-4.5 px-0 border-b border-border">
         <div>
           <div className="text-secondary text-[12px] font-bold mb-2">学习方向校准</div>
           <h1 className="text-[30px] font-bold leading-tight mb-2.5 text-text-strong">{model.title}</h1>
@@ -87,22 +87,22 @@ export function CapabilityRoadmap({
 
       <section className="grid grid-cols-4 max-md:grid-cols-1 gap-3">
         <div className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
-          <span className="color-text2 text-[12px] font-bold">能力维度</span>
+          <span className="text-text-secondary text-[12px] font-bold">能力维度</span>
           <strong className="text-text text-[24px] leading-tight">{model.capabilities.length}</strong>
           <span className="text-text-secondary text-[12px] leading-normal">按腾讯中高级前端面试拆分</span>
         </div>
         <div className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
-          <span className="color-text2 text-[12px] font-bold">关键文档进度</span>
+          <span className="text-text-secondary text-[12px] font-bold">关键文档进度</span>
           <strong className="text-text text-[24px] leading-tight">{doneDocs}/{totalDocs}</strong>
           <span className="text-text-secondary text-[12px] leading-normal">来自当前学习系统已有内容</span>
         </div>
         <div className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
-          <span className="color-text2 text-[12px] font-bold">错题复训</span>
+          <span className="text-text-secondary text-[12px] font-bold">错题复训</span>
           <strong className="text-text text-[24px] leading-tight">{wrongCount}</strong>
           <span className="text-text-secondary text-[12px] leading-normal">优先从错题最多的能力维度回补</span>
         </div>
         <div className="border border-secondary/45 rounded-lg bg-gradient-to-br from-secondary/12 to-primary/8 bg-surface p-4 grid gap-1.5">
-          <span className="color-text2 text-[12px] font-bold">下一步建议</span>
+          <span className="text-text-secondary text-[12px] font-bold">下一步建议</span>
           <strong className="text-text text-[24px] leading-tight">{weakest?.capability.name || '先建立地图'}</strong>
           <span className="text-text-secondary text-[12px] leading-normal">{weakest ? `当前完成 ${weakest.state.percent}%` : '从技术破冰开始'}</span>
         </div>
@@ -110,7 +110,9 @@ export function CapabilityRoadmap({
 
       <section className="grid grid-cols-3 max-md:grid-cols-1 gap-3">
         {model.principles.map(item => (
-          <div className="border-l-3 border-primary rounded-r-lg bg-surface p-3 px-4 text-[13px] text-text-secondary" key={item}>{item}</div>
+          <div className="border border-border border-l-4 border-l-primary rounded-lg bg-surface p-3.5 px-4.5 text-[13px] text-text-secondary flex items-center" key={item}>
+            {item}
+          </div>
         ))}
       </section>
 
@@ -124,7 +126,7 @@ export function CapabilityRoadmap({
             const primaryDoc = state.firstUndone;
             const primaryModule = getModuleProgress(capability.drillModuleIds[0], progressCache)?.module;
             return (
-              <article className="border border-border rounded-lg bg-surface p-4.5 grid gap-3" key={capability.id}>
+              <article className="border border-border rounded-lg bg-surface p-4.5 flex flex-col gap-3.5" key={capability.id}>
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="text-[17px] font-semibold leading-snug text-text-strong">{capability.name}</h3>
                   <span className="text-secondary text-[18px] font-extrabold">{state.percent}%</span>
@@ -149,7 +151,7 @@ export function CapabilityRoadmap({
                     </div>
                   ))}
                 </div>
-                <div className="flex gap-1.5 flex-wrap pt-0.5 border-t border-border/40 pt-2">
+                <div className="flex gap-1.5 flex-wrap border-t border-border/40 pt-2">
                   {state.docLinks.slice(0, 5).map(({ module, docIdx, doc }) => (
                     <button key={`${module.id}-${docIdx}`} className="border border-border rounded-[7px] bg-transparent text-text-secondary cursor-pointer text-[12px] leading-normal p-1.25 px-2 max-w-full text-left transition-all duration-150 hover:border-primary hover:text-primary" onClick={() => onOpenDoc(module.id, docIdx)}>
                       {doc.title}
@@ -157,7 +159,7 @@ export function CapabilityRoadmap({
                   ))}
                   {!state.docLinks.length && <span className="text-text-secondary text-[12px]">当前公开内容中暂无可用文档</span>}
                 </div>
-                <div className="flex gap-2 flex-wrap pt-0.5">
+                <div className="flex gap-2 flex-wrap mt-auto pt-1">
                   {primaryDoc && (
                     <button className="border border-primary bg-primary text-white rounded-[7px] p-1.25 px-2.25 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:bg-primary-hover hover:border-primary-hover" onClick={() => onOpenDoc(primaryDoc.module.id, primaryDoc.docIdx)}>
                       学下一篇

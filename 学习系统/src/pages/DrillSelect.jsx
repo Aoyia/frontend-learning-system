@@ -22,7 +22,7 @@ export function DrillSelect({ drillStatCache, onStartDrill }) {
                 <div className="text-[12px] text-text-secondary mt-1">{total} 题 · 已练 {done} · 最近正确率 {latestPct}%</div>
               </div>
               <div className="flex justify-center gap-1.5 flex-wrap mt-3">
-                <button className="w-fit border border-accent bg-accent text-white rounded-[7px] px-2 py-1 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:bg-primary-hover hover:border-primary-hover" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, DEFAULT_DRILL_LIMIT); }}>
+                <button className="w-fit border border-primary bg-primary text-white rounded-[7px] px-2 py-1 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:bg-primary-hover hover:border-primary-hover" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, DEFAULT_DRILL_LIMIT); }}>
                   练 {Math.min(DEFAULT_DRILL_LIMIT, total)} 题
                 </button>
                 <button className="w-fit border border-border bg-surface-alt text-text-secondary rounded-[7px] px-2 py-1 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, QUICK_DRILL_LIMIT); }}>

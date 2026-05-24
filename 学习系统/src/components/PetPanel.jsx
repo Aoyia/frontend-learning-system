@@ -22,7 +22,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
   const displayStage = previewStage || view.current;
   const isPreviewing = previewStage !== null && previewStage.index !== view.current.index;
 
-  const radius = 72;
+  const radius = 136;
   const strokeDash = 2 * Math.PI * radius;
   const fillProgress = isPreviewing ? 100 : view.progress;
   const strokeOffset = strokeDash - (strokeDash * fillProgress) / 100;
@@ -96,12 +96,12 @@ export function PetPanel({ petState, petEvents, onClose }) {
             {/* 境界背景光效 —— 在宠物最底层 */}
             <PetAuraBg realm={displayStage.realm} />
             {/* SVG 聚灵修为圆环 */}
-            <svg className="absolute w-40 h-40 z-1 pointer-events-none" viewBox="0 0 160 160" style={{ overflow: 'visible' }}>
-              <circle className="fill-none stroke-border stroke-1" cx="80" cy="80" r={radius} />
+            <svg className="absolute w-[288px] h-[288px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1] pointer-events-none" viewBox="0 0 288 288" style={{ overflow: 'visible' }}>
+              <circle className="fill-none stroke-border stroke-1" cx="144" cy="144" r={radius} />
               <circle
                 className="pet-aura-ring-fill"
-                cx="80"
-                cy="80"
+                cx="144"
+                cy="144"
                 r={radius}
                 strokeDasharray={strokeDash}
                 strokeDashoffset={strokeOffset}
@@ -109,7 +109,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
             </svg>
             <img
               key={displayStage.index}
-              className="pet-zenith-avatar"
+              className="pet-zenith-avatar w-56 h-56 object-contain relative z-10"
               src={displayStage.image}
               alt={displayStage.name}
             />
@@ -127,7 +127,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
 
         {/* 大境界修仙天梯 */}
         <div className="w-full my-5 relative">
-          <div className="absolute left-2.5 right-2.5 top-3.5 h-[1px] bg-border z-0" />
+          <div className="absolute left-2.5 right-2.5 top-1.5 h-[1px] bg-border z-0" />
           <div className="flex justify-between relative z-1">
             {LADDER_STAGES.map(stage => {
               const unlocked = (petState.xp || 0) >= PET_STAGES.find(s => s.realm === stage.label).threshold;
@@ -185,7 +185,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
 
         {/* 全屏半透明神兽进化图志 Overlay */}
         {showCodices && (
-          <div className="fixed inset-0 bg-bg/96 z-[600] flex flex-col p-10 overflow-y-auto animate-[pet-fade-in_0.3s_cubic-bezier(0.25,1,0.5,1)_forwards]" onClick={() => setShowCodices(false)}>
+          <div className="fixed inset-0 bg-[var(--pet-codex-bg)] backdrop-blur-md z-[600] flex flex-col p-10 overflow-y-auto animate-[pet-fade-in_0.3s_cubic-bezier(0.25,1,0.5,1)_forwards]" onClick={() => setShowCodices(false)}>
             <div className="flex justify-between items-center mb-6" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-[20px] font-extrabold text-text-strong">神兽进化图志</h3>
               <button
@@ -196,7 +196,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
                 ×
               </button>
             </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4" onClick={(e) => e.stopPropagation()}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-4" onClick={(e) => e.stopPropagation()}>
               {PET_STAGES.map(stage => {
                 const unlocked = (petState.xp || 0) >= stage.threshold;
                 const isCurrent = stage.index === view.current.index;

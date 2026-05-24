@@ -29,13 +29,13 @@ export function WrongBookPage({ wrongBookCache, onStartWrongBook, onReadChapter 
       <h2 className="text-[22px] font-bold mb-1.5 text-text-strong">🧩 错题本</h2>
       <p className="text-text-secondary text-[13px] mb-6">当前共 {total} 道错题。优先练错题，答对后自动移出错题本，再回推荐章节补知识点。</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-        <div className="bg-surface border-2 border-border rounded-xl p-4 cursor-pointer transition-all duration-200 text-center hover:border-primary" onClick={() => onStartWrongBook()}>
+        <div className="bg-surface border border-border rounded-xl p-4 cursor-pointer transition-all duration-200 text-center hover:border-primary" onClick={() => onStartWrongBook()}>
           <div className="text-[24px] mb-2">🔥</div>
           <div className="text-[14px] font-semibold text-text-strong">全部错题</div>
           <div className="text-[12px] text-text-secondary mt-1">{total} 题 · 综合复盘</div>
         </div>
         {moduleStats.filter(item => item.count > 0).map(({ module, count }) => (
-          <div className="bg-surface border-2 border-border rounded-xl p-4 cursor-pointer transition-all duration-200 text-center hover:border-primary" key={module.id} onClick={() => onStartWrongBook(module.id)}>
+          <div className="bg-surface border border-border rounded-xl p-4 cursor-pointer transition-all duration-200 text-center hover:border-primary" key={module.id} onClick={() => onStartWrongBook(module.id)}>
             <div className="text-[24px] mb-2">{module.icon}</div>
             <div className="text-[14px] font-semibold text-text-strong">{module.name}</div>
             <div className="text-[12px] text-text-secondary mt-1">{count} 题 · 针对练习</div>

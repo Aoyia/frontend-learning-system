@@ -185,10 +185,10 @@ D. 用枚举常量
 
 `satisfies` 相比 `as` 的关键优势是什么？
 
-A. `satisfies` 会跳过类型检查
+A. `satisfies` 会允许该变量强行绕过 Strict 选项校验
 B. `satisfies` 在通过类型检查的同时保留更精确的字面量类型
-C. `satisfies` 会自动写运行时校验
-D. `satisfies` 只能用于函数
+C. `satisfies` 会在编译期自动向源码中注入运行时类型保护
+D. `satisfies` 能够直接对高阶函数的泛型参数执行静态断言
 
 答案：B
 

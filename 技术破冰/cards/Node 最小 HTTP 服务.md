@@ -218,10 +218,10 @@ D. 由内存决定
 
 Express 中间件 `app.use(express.json())` 的作用是什么？
 
-A. 自动写测试
+A. 拦截所有请求并对其执行 TLS/SSL 链路解密
 B. 把 JSON 请求体解析到 `req.body`
-C. 让所有响应变成 JSON
-D. 替代数据库
+C. 自动将响应头 Content-Type 修正为 application/json
+D. 挂载持久化内存连接池以提供缓存代理
 
 答案：B
 

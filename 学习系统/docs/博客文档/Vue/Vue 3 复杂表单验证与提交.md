@@ -636,8 +636,8 @@ D. handleSubmit
 在 Vue 3 的自定义组件设计中，组件上的默认 'v-model' 指令本质上主要对应什么 prop 和事件？
 A. modelValue prop 与 update:modelValue 事件
 B. provide / inject
-C. keep-alive 缓存
-D. teleport 挂载
+C. "<KeepAlive>" 的生命周期缓存机制与多实例共享状态
+D. "<Teleport>" 传送门挂载后的 DOM 节点分层与样式隔离
 答案：A
 解析：
 💡 它解决了什么问题：
@@ -679,10 +679,10 @@ D. 成功后重置或跳转
 
 ### Q6 [single]
 在前端复杂表单校验（例如“确认密码需与新密码一致”）的场景中，这类跨字段校验逻辑更适合放在哪里？
-A. 每个 input 的 placeholder 里
+A. 对应表单字段在输入框中定义的占位符（Placeholder）属性内
 B. schema 或统一 validateAll 流程里
-C. CSS 选择器里
-D. 路由守卫里
+C. CSS 样式表的属性选择器或全局样式覆盖机制内
+D. 路由守卫的导航重定向流程与全局钩子拦截器内
 答案：B
 解析：
 💡 它解决了什么问题：

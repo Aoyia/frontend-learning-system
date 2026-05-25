@@ -857,8 +857,8 @@ D. 'baseParse' 最终调用 'createRoot' 返回根节点
 in Vue 3 模板编译的 Transform 阶段（转换阶段），其核心产物是什么？
 A. 最终的 render 函数字符串
 B. 带有 'codegenNode' 属性的优化 AST
-C. 经过 Minify 压缩的代码
-D. 虚拟 DOM 节点
+C. 经过 Tree Shaking 剔除未引用运行时逻辑的精简版模块映射表
+D. 能够在浏览器中直接渲染的真实 DOM 节点树片段
 答案：B
 解析：
 💡 它解决了什么问题：
@@ -959,10 +959,10 @@ D. 将 VNode 转换为真实 DOM
 
 ### Q10 [single]
 在 Vue 3 运行时编译器 'compileToFunction' 的底层实现中，使用 'new Function('Vue', code)(runtimeDom)' 这行代码的主要作用是？
-A. 创建一个 Web Worker 执行编译代码
+A. 在后台启动 Web Worker 线程以执行高计算开销的静态编译
 B. 将 generate 产出的代码字符串动态创建为可执行函数
-C. 将 AST 序列化为 JSON
-D. 注册全局组件
+C. 将当前的 AST 数据结构深层序列化以绕过 V8 隐藏类限制
+D. 向当前的全局应用实例注册具备动态模板特性的组件引用
 答案：B
 解析：
 💡 它解决了什么问题：

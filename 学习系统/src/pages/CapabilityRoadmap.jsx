@@ -161,17 +161,17 @@ export function CapabilityRoadmap({
                 </div>
                 <div className="flex gap-2 flex-wrap mt-auto pt-1">
                   {primaryDoc && (
-                    <button className="border border-primary bg-primary text-white rounded-[7px] p-1.25 px-2.25 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:bg-primary-hover hover:border-primary-hover" onClick={() => onOpenDoc(primaryDoc.module.id, primaryDoc.docIdx)}>
+                    <button className="border border-primary bg-primary text-white rounded-[7px] py-2 px-4 text-[13.5px] font-semibold cursor-pointer transition-all duration-180 hover:bg-primary-hover hover:border-primary-hover" onClick={() => onOpenDoc(primaryDoc.module.id, primaryDoc.docIdx)}>
                       学下一篇
                     </button>
                   )}
                   {primaryModule && (
-                    <button className="border border-border bg-surface-alt text-text-secondary rounded-[7px] p-1.25 px-2.25 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={() => onOpenDrill(primaryModule.id)}>
+                    <button className="border border-border bg-surface-alt text-text-secondary rounded-[7px] py-2 px-4 text-[13.5px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={() => onOpenDrill(primaryModule.id)}>
                       刷专项题
                     </button>
                   )}
                   {state.wrongCount > 0 && (
-                    <button className="border border-border bg-transparent text-text-secondary rounded-[7px] p-1.25 px-2.25 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={() => onOpenWrongBook(capability.drillModuleIds[0])}>
+                    <button className="border border-border bg-transparent text-text-secondary rounded-[7px] py-2 px-4 text-[13.5px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={() => onOpenWrongBook(capability.drillModuleIds[0])}>
                       错题复训
                     </button>
                   )}

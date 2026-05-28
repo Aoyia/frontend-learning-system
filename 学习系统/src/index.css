@@ -937,5 +937,133 @@ body {
   }
 }
 
+/* ========== QUESTION BLOCK & OPTIONS LIGHT THEME BRIGHTENING ========== */
+.question-type-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+/* 深色模式下的微调，确保两边都好看 */
+.question-type-badge.single {
+  background-color: rgba(108, 99, 255, 0.15);
+  color: #a5b4fc;
+}
+.question-type-badge.multiple {
+  background-color: rgba(78, 205, 196, 0.15);
+  color: #99f6e4;
+}
+.question-type-badge.judgment {
+  background-color: rgba(237, 137, 54, 0.15);
+  color: #fed7aa;
+}
+
+/* 亮色模式下题目与选项的配色提升 */
+:root[data-theme="light"] {
+  --border: #e2e8f0;
+}
+
+:root[data-theme="light"] .question-type-badge.single {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+:root[data-theme="light"] .question-type-badge.multiple {
+  background-color: #faf5ff;
+  color: #7c3aed;
+  border: 1px solid #e9d5ff;
+}
+:root[data-theme="light"] .question-type-badge.judgment {
+  background-color: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #ffedd5;
+}
+
+:root[data-theme="light"] [data-component="question-block"] {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.015), 0 10px 30px rgba(0, 0, 0, 0.025);
+}
+
+:root[data-theme="light"] [data-element="question-stem"] {
+  color: #0f172a;
+}
+
+/* 未选中选项：极简精致的浅灰底色 */
+:root[data-theme="light"] [data-element="option"][data-state="unselected"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #334155;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-theme="light"] [data-element="option"][data-state="unselected"] > span {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+  border: 1px solid #e2e8f0;
+}
+
+/* 未选中 hover 态 */
+:root[data-theme="light"] [data-element="option"][data-state="unselected"]:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+:root[data-theme="light"] [data-element="option"][data-state="unselected"]:hover > span {
+  background-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+/* 选中选项：纯净天蓝 */
+:root[data-theme="light"] [data-element="option"][data-state="selected"] {
+  background-color: #eff6ff !important;
+  border-color: #3b82f6 !important;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+:root[data-theme="light"] [data-element="option"][data-state="selected"] > span {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+  border: 1px solid #2563eb;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
+}
+
+/* 正确选项样式 */
+:root[data-theme="light"] [data-element="option"][data-state="correct"] {
+  background-color: #f0fdf4 !important;
+  border-color: #22c55e !important;
+  color: #15803d;
+}
+
+:root[data-theme="light"] [data-element="option"][data-state="correct"] > span {
+  background-color: #22c55e !important;
+  color: #ffffff !important;
+  border: 1px solid #16a34a;
+  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+}
+
+/* 错误选项样式 */
+:root[data-theme="light"] [data-element="option"][data-state="wrong"] {
+  background-color: #fef2f2 !important;
+  border-color: #ef4444 !important;
+  color: #b91c1c;
+}
+
+:root[data-theme="light"] [data-element="option"][data-state="wrong"] > span {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border: 1px solid #dc2626;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+}
+
 
 

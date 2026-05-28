@@ -7,7 +7,10 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
 
   return (
     <div data-component="question-block" className="bg-surface border border-border rounded-xl p-6 mb-4" id={`qq-${globalIdx}`}>
-      <div data-element="question-meta" className="text-[12px] text-text-secondary mb-2.5">第 {globalIdx + 1} 题 · {typeLabel}</div>
+      <div data-element="question-meta" className="flex items-center gap-2 text-[12px] text-text-secondary mb-2.5">
+        <span>第 {globalIdx + 1} 题</span>
+        <span className={`question-type-badge ${question.type}`}>{typeLabel}</span>
+      </div>
       <div data-element="question-stem" className="text-[16px] font-medium leading-relaxed mb-5 text-text-strong">{question.question}</div>
       <div data-element="options" className="flex flex-col gap-2.5">
         {question.options.map((opt, i) => {

@@ -2,7 +2,7 @@ import { LEARNING_CONTENT } from '../../data/learning-content.js';
 
 export function ModuleSelect({ progressCache, onOpenModule }) {
   return (
-    <div className="max-w-[700px] mx-auto">
+    <div data-component="module-select" className="max-w-[700px] mx-auto">
       <h2 className="text-[22px] font-bold mb-1.5 text-text-strong">选择学习模块</h2>
       <p className="text-text-secondary text-[13px] mb-6">每个模块包含多篇连续性文档，学完每篇后有随堂作业</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6">

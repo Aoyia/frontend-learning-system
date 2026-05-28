@@ -4,6 +4,7 @@ export function PetWidget({ petState, onOpen }) {
   const view = getPetView(petState);
   return (
     <button
+      data-component="pet-widget"
       className="h-9.5 min-w-[130px] p-[3px] pr-3 pl-1 border border-border rounded-full bg-white/3 backdrop-blur-md text-text inline-flex items-center gap-2.5 cursor-pointer mr-2 transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] hover:border-secondary/60 hover:bg-secondary/6 hover:-translate-y-0.5"
       onClick={onOpen}
       title={`学习战宠：${view.current.realm} · ${view.current.name} (修为: ${petState.xp || 0})，点击查看进化路线`}

@@ -1,5 +1,7 @@
+import React, { useState } from 'react';
 import { LEARNING_CONTENT } from '../../data/learning-content.js';
 import { TENCENT_FRONTEND_CAPABILITY_MODEL } from '../../data/capability-model.js';
+import { TENCENT_FOLLOWUP_ANSWERS } from '../../data/followup-answers.js';
 
 function findModule(moduleId) {
   return LEARNING_CONTENT.modules.find(module => module.id === moduleId) || null;
@@ -48,6 +50,44 @@ export function CapabilityRoadmap({
   onOpenWrongBook,
 }) {
   const model = TENCENT_FRONTEND_CAPABILITY_MODEL;
+  const [selectedCapId, setSelectedCapId] = useState(model.capabilities[0]?.id || null);
+  const [activeQuestion, setActiveQuestion] = useState(null);
+
+  function renderMarkdownSimple(text) {
+    if (!text) return null;
+    return text.split('\n').map((line, idx) => {
+      let cleanLine = line;
+      let isList = false;
+      if (line.trim().startsWith('- ')) {
+        cleanLine = line.trim().substring(2);
+        isList = true;
+      } else if (/^\d+\.\s/.test(line.trim())) {
+        cleanLine = line.trim().replace(/^\d+\.\s/, '');
+        isList = true;
+      }
+      
+      const parts = cleanLine.split('**');
+      const renderedParts = parts.map((part, pIdx) => {
+        if (pIdx % 2 === 1) {
+          return <strong key={pIdx} style={{ color: 'var(--strong-text)', fontWeight: 'bold' }}>{part}</strong>;
+        }
+        return part;
+      });
+
+      if (isList) {
+        return (
+          <li key={idx} className="ml-4 list-disc mb-1.5 text-[13.5px] leading-relaxed text-text">
+            {renderedParts}
+          </li>
+        );
+      }
+      return (
+        <p key={idx} className="mb-2.5 text-[13.5px] leading-relaxed text-text">
+          {renderedParts}
+        </p>
+      );
+    });
+  }
   const capabilityStates = model.capabilities.map(capability => ({
     capability,
     state: getCapabilityState(capability, progressCache, wrongBookCache),
@@ -72,8 +112,8 @@ export function CapabilityRoadmap({
   }
 
   return (
-    <div className="max-w-[1180px] mx-auto grid gap-9">
-      <section className="flex max-md:flex-col items-end max-md:items-stretch justify-between gap-6 py-4.5 px-0 border-b border-border">
+    <div data-component="capability-roadmap" className="max-w-[1180px] mx-auto grid gap-9">
+      <section data-element="header" className="flex max-md:flex-col items-end max-md:items-stretch justify-between gap-6 py-4.5 px-0 border-b border-border">
         <div>
           <div className="text-secondary text-[12px] font-bold mb-2">学习方向校准</div>
           <h1 className="text-[30px] font-bold leading-tight mb-2.5 text-text-strong">{model.title}</h1>
@@ -86,29 +126,29 @@ export function CapabilityRoadmap({
       </section>
 
       <section className="grid grid-cols-4 max-md:grid-cols-1 gap-3">
-        <div className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
+        <div data-element="stat-card" className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
           <span className="text-text-secondary text-[12px] font-bold">能力维度</span>
           <strong className="text-text text-[24px] leading-tight">{model.capabilities.length}</strong>
           <span className="text-text-secondary text-[12px] leading-normal">按腾讯中高级前端面试拆分</span>
         </div>
-        <div className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
+        <div data-element="stat-card" className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
           <span className="text-text-secondary text-[12px] font-bold">关键文档进度</span>
           <strong className="text-text text-[24px] leading-tight">{doneDocs}/{totalDocs}</strong>
           <span className="text-text-secondary text-[12px] leading-normal">来自当前学习系统已有内容</span>
         </div>
-        <div className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
+        <div data-element="stat-card" className="border border-border rounded-lg bg-surface p-4 grid gap-1.5">
           <span className="text-text-secondary text-[12px] font-bold">错题复训</span>
           <strong className="text-text text-[24px] leading-tight">{wrongCount}</strong>
           <span className="text-text-secondary text-[12px] leading-normal">优先从错题最多的能力维度回补</span>
         </div>
-        <div className="border border-secondary/45 rounded-lg bg-gradient-to-br from-secondary/12 to-primary/8 bg-surface p-4 grid gap-1.5">
+        <div data-element="stat-card" className="border border-secondary/45 rounded-lg bg-gradient-to-br from-secondary/12 to-primary/8 bg-surface p-4 grid gap-1.5">
           <span className="text-text-secondary text-[12px] font-bold">下一步建议</span>
           <strong className="text-text text-[24px] leading-tight">{weakest?.capability.name || '先建立地图'}</strong>
           <span className="text-text-secondary text-[12px] leading-normal">{weakest ? `当前完成 ${weakest.state.percent}%` : '从技术破冰开始'}</span>
         </div>
       </section>
 
-      <section className="grid grid-cols-3 max-md:grid-cols-1 gap-3">
+      <section data-element="principles" className="grid grid-cols-3 max-md:grid-cols-1 gap-3">
         {model.principles.map(item => (
           <div className="border border-border border-l-4 border-l-primary rounded-lg bg-surface p-3.5 px-4.5 text-[13px] text-text-secondary flex items-center" key={item}>
             {item}
@@ -116,7 +156,7 @@ export function CapabilityRoadmap({
         ))}
       </section>
 
-      <section className="grid gap-4.5">
+      <section data-element="capability-section" className="grid gap-4.5">
         <div className="mb-1">
           <h2 className="text-[20px] font-bold mb-1.5 text-text-strong">能力模型</h2>
           <p className="text-[13px] text-text-secondary">每个能力都绑定已有文档、专项刷题和腾讯面试追问，避免只收藏资料不校准输出。</p>
@@ -126,7 +166,7 @@ export function CapabilityRoadmap({
             const primaryDoc = state.firstUndone;
             const primaryModule = getModuleProgress(capability.drillModuleIds[0], progressCache)?.module;
             return (
-              <article className="border border-border rounded-lg bg-surface p-4.5 flex flex-col gap-3.5" key={capability.id}>
+              <article data-element="capability-card" className="border border-border rounded-lg bg-surface p-4.5 flex flex-col gap-3.5" key={capability.id}>
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="text-[17px] font-semibold leading-snug text-text-strong">{capability.name}</h3>
                   <span className="text-secondary text-[18px] font-extrabold">{state.percent}%</span>
@@ -182,7 +222,7 @@ export function CapabilityRoadmap({
         </div>
       </section>
 
-      <section className="grid gap-4.5">
+      <section data-element="roadmap-section" className="grid gap-4.5">
         <div className="mb-1">
           <h2 className="text-[20px] font-bold mb-1.5 text-text-strong">推荐学习路径</h2>
           <p className="text-[13px] text-text-secondary">每一轮学习都保持“地图 - 深文 - 小题量校准 - 项目追问 - 错题复训”的节奏。</p>
@@ -205,18 +245,105 @@ export function CapabilityRoadmap({
         </div>
       </section>
 
-      <section className="grid gap-4.5">
+      <section data-element="followup-section" className="grid gap-4.5">
         <div className="mb-1">
           <h2 className="text-[20px] font-bold mb-1.5 text-text-strong">腾讯追问校准</h2>
-          <p className="text-[13px] text-text-secondary">刷题结束后，用这些追问检查自己能不能从“知道答案”走到“能解决客户问题”。</p>
+          <p className="text-[13px] text-text-secondary">用这些大厂高频追问检查自己能不能从“记忆背诵”走向“工程闭环定位”。点击问题可查看防拷打回答要点与关联文献。</p>
         </div>
-        <div className="grid grid-cols-3 max-md:grid-cols-1 gap-3">
-          {model.capabilities.map(capability => (
-            <div className="border border-border rounded-lg bg-surface p-3.75" key={capability.id}>
-              <h3 className="text-[14px] font-semibold mb-2.5 text-text-strong">{capability.name}</h3>
-              {capability.tencentFollowups.map(question => <p className="text-text-secondary text-[12px] leading-relaxed mb-2 last:mb-0" key={question}>{question}</p>)}
-            </div>
-          ))}
+
+        <div className="followup-hub-container">
+          {/* 左侧侧边栏 */}
+          <div className="followup-sidebar">
+            {model.capabilities.map(cap => (
+              <button
+                key={cap.id}
+                className={`followup-sidebar-btn ${selectedCapId === cap.id ? 'active' : ''}`}
+                onClick={() => setSelectedCapId(cap.id)}
+              >
+                <span>{cap.name}</span>
+                <span>{selectedCapId === cap.id ? '●' : ''}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* 右侧问题列表 */}
+          <div className="followup-content-panel">
+            {(() => {
+              const activeCap = model.capabilities.find(cap => cap.id === selectedCapId);
+              if (!activeCap) return <p className="text-text-secondary text-[13px]">请选择一个能力维度</p>;
+              return activeCap.tencentFollowups.map((question, qIdx) => (
+                <div
+                  key={qIdx}
+                  className="followup-question-card"
+                  onClick={() => setActiveQuestion(question)}
+                >
+                  <span className="followup-question-text">{question}</span>
+                  <span className="followup-arrow-icon">查看解析 →</span>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+
+        {/* 侧边滑动抽屉 (Drawer) */}
+        <div 
+          className={`drawer-overlay ${activeQuestion ? 'open' : ''}`} 
+          onClick={() => setActiveQuestion(null)} 
+        />
+        <div className={`drawer-panel ${activeQuestion ? 'open' : ''}`}>
+          {activeQuestion && (() => {
+            const answerData = TENCENT_FOLLOWUP_ANSWERS[activeQuestion];
+            const cap = model.capabilities.find(c => c.tencentFollowups.includes(activeQuestion));
+            return (
+              <>
+                <div className="drawer-header">
+                  <div className="drawer-title-area">
+                    <span className="drawer-category-tag">{cap?.name || '能力维度'}</span>
+                    <h3 className="drawer-title">{activeQuestion}</h3>
+                  </div>
+                  <button className="drawer-close-btn" onClick={() => setActiveQuestion(null)}>✕</button>
+                </div>
+                <div className="drawer-body">
+                  {answerData ? (
+                    <>
+                      <div className="drawer-section">
+                        <h4 className="drawer-section-title">💡 黄金口述 30 秒（快速破题）</h4>
+                        <div className="drawer-section-content">
+                          <p>{answerData.brief}</p>
+                        </div>
+                      </div>
+                      <div className="drawer-section">
+                        <h4 className="drawer-section-title">🔍 实战归因与链路定位（防拷打）</h4>
+                        <div className="drawer-section-content">
+                          {renderMarkdownSimple(answerData.detail)}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="drawer-section">
+                      <h4 className="drawer-section-title">💡 官方防拷打回答</h4>
+                      <div className="drawer-section-content">
+                        <p>该追问的深度解析指南正在拟合生成中...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {answerData?.docLink && (
+                  <div className="drawer-footer">
+                    <button 
+                      className="drawer-link-btn"
+                      onClick={() => {
+                        onOpenDoc(answerData.docLink.moduleId, answerData.docLink.docIdx);
+                        setActiveQuestion(null);
+                      }}
+                    >
+                      📖 {answerData.docLink.name || '阅读关联文章'}
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </section>
     </div>

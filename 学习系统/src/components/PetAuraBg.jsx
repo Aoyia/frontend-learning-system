@@ -312,6 +312,7 @@ export function PetAuraBg({ realm }) {
   return (
     <canvas
       ref={canvasRef}
+      data-component="pet-aura-bg"
       className="pet-aura-bg-canvas"
       style={{ width: 360, height: 360 }}
       aria-hidden="true"

@@ -53,7 +53,7 @@ export function ArticleToc({ items }) {
   const tocClass = `hidden xl:block sticky top-6 max-h-[calc(100vh-104px)] overflow-y-auto pl-4 py-3 border-l border-border text-text-secondary [scrollbar-gutter:stable] [scrollbar-width:thin] ${isScrolling ? '[scrollbar-color:var(--border)_transparent]' : '[scrollbar-color:transparent_transparent]'} transition-all`;
 
   return (
-    <aside className={tocClass} aria-label="文章目录" onScroll={handleTocScroll}>
+    <aside data-component="article-toc" className={tocClass} aria-label="文章目录" onScroll={handleTocScroll}>
       <div className="mb-2 text-text text-[12px] font-bold">目录</div>
       <div className="grid gap-0.5">
         {items.map(item => {
@@ -63,6 +63,8 @@ export function ArticleToc({ items }) {
           return (
             <button
               key={item.id}
+              data-element="toc-item"
+              data-state={isActive ? 'active' : 'inactive'}
               className={`w-full border-0 rounded-md bg-transparent text-text-secondary cursor-pointer text-[12px] leading-relaxed p-1.5 px-2 text-left transition-all duration-150 hover:bg-surface-alt hover:text-text ${isDepth3 ? 'pl-5 text-[11px]' : ''} ${isActive ? 'bg-primary-light text-primary font-bold' : ''}`}
               onClick={() => scrollToHeading(item.id)}
               title={item.text}

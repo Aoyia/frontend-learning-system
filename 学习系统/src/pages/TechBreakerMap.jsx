@@ -157,7 +157,7 @@ export function TechBreakerMap({ onOpenCard }) {
   }
 
   return (
-    <div className="h-full min-h-0 flex flex-col relative">
+    <div data-component="tech-breaker-map" className="h-full min-h-0 flex flex-col relative">
       <div className="absolute top-3.5 left-3.5 right-3.5 z-5 flex items-center justify-between gap-3 pointer-events-none">
         <div className="px-3 py-2 border border-border rounded-lg bg-surface/86 text-text text-[14px] font-bold shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md pointer-events-auto">技术破冰</div>
         <div className="flex gap-2 pointer-events-auto">

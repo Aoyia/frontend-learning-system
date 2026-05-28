@@ -51,19 +51,19 @@ export default function AnswerCard({ quizState, collapsed, mobileOpen, onToggle,
   const innerClass = `flex flex-col flex-1 min-h-0 ${collapsed ? 'md:hidden' : 'md:flex'} max-md:h-[calc(100%-44px)]`;
 
   return (
-    <aside className={sidebarClass}>
-      <div className={collapsedBarClass} onClick={onToggle}>
+    <aside data-component="answer-card" data-state={collapsed ? 'collapsed' : 'expanded'} className={sidebarClass}>
+      <div data-element="toggle-bar" className={collapsedBarClass} onClick={onToggle}>
         <span className="text-[12px] font-semibold tracking-wider max-md:text-text-secondary max-md:font-semibold">答题卡</span>
       </div>
-      <div className={innerClass}>
-        <div className="hidden md:flex items-center justify-between p-3 px-3 border-b border-border font-semibold text-[14px] text-text-strong">
+      <div data-element="content" className={innerClass}>
+        <div data-element="header" className="hidden md:flex items-center justify-between p-3 px-3 border-b border-border font-semibold text-[14px] text-text-strong">
           <div>
             <div className="text-[14px] font-bold text-text-strong">答题卡</div>
             <div className="text-text-secondary text-[11px] font-medium mt-0.5">已处理 {correctCnt + wrongCnt + selectedCnt} / {totalQ}</div>
           </div>
           <button className="w-6.5 h-6.5 rounded-md border border-border bg-transparent text-text-secondary cursor-pointer text-[16px] flex items-center justify-center hover:text-text hover:border-text" onClick={onToggle} title="折叠">{collapsed ? '‹' : '›'}</button>
         </div>
-        <div className="flex-1 overflow-y-auto p-3 px-3">
+        <div data-element="grid" className="flex-1 overflow-y-auto p-3 px-3">
           {groups.map(group => (
             <div className="mt-2.5 first:mt-0" key={group.pageNo}>
               <div className={`text-[11px] text-text-secondary uppercase tracking-wide mb-1.5 font-semibold ${group.isCurrent ? 'text-secondary' : ''}`}>
@@ -80,6 +80,8 @@ export default function AnswerCard({ quizState, collapsed, mobileOpen, onToggle,
                   return (
                     <div
                       key={cell.gi}
+                      data-element="cell"
+                      data-state={cell.cls}
                       className={`w-7.5 h-7.5 rounded-[7px] flex items-center justify-center text-[12px] font-semibold cursor-pointer border transition-all duration-150 select-none hover:brightness-125 ${cellCls} ${group.isCurrent ? 'ring-1 ring-secondary ring-inset' : ''}`}
                       title={`第 ${cell.gi + 1} 题 · ${cell.title}`}
                       onClick={() => onJumpToQuestion(cell.gi)}
@@ -92,7 +94,7 @@ export default function AnswerCard({ quizState, collapsed, mobileOpen, onToggle,
             </div>
           ))}
         </div>
-        <div className="p-2.5 px-3.5 border-t border-border grid grid-cols-2 gap-x-2.5 gap-y-2 text-[12px] text-text-secondary max-md:flex max-md:flex-wrap max-md:gap-x-4">
+        <div data-element="stats" className="p-2.5 px-3.5 border-t border-border grid grid-cols-2 gap-x-2.5 gap-y-2 text-[12px] text-text-secondary max-md:flex max-md:flex-wrap max-md:gap-x-4">
           <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full shrink-0 bg-success" />对 {correctCnt}</div>
           <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full shrink-0 bg-danger" />错 {wrongCnt}</div>
           <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full shrink-0 bg-primary" />已选 {selectedCnt}</div>

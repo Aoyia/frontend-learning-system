@@ -6,16 +6,17 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
   const renderOptionMarkdown = text => ({ __html: marked.parse(text || '').trim() });
 
   return (
-    <div className="bg-surface border border-border rounded-xl p-6 mb-4" id={`qq-${globalIdx}`}>
-      <div className="text-[12px] text-text-secondary mb-2.5">第 {globalIdx + 1} 题 · {typeLabel}</div>
-      <div className="text-[16px] font-medium leading-relaxed mb-5 text-text-strong">{question.question}</div>
-      <div className="flex flex-col gap-2.5">
+    <div data-component="question-block" className="bg-surface border border-border rounded-xl p-6 mb-4" id={`qq-${globalIdx}`}>
+      <div data-element="question-meta" className="text-[12px] text-text-secondary mb-2.5">第 {globalIdx + 1} 题 · {typeLabel}</div>
+      <div data-element="question-stem" className="text-[16px] font-medium leading-relaxed mb-5 text-text-strong">{question.question}</div>
+      <div data-element="options" className="flex flex-col gap-2.5">
         {question.options.map((opt, i) => {
           const keyLabel = question.type === 'judgment' ? (i === 0 ? '✓' : '✗') : 'ABCDEF'[i];
           
           // 动态拼接 Tailwind 状态类，保障在单行与多行下完美自适应高度
           let optionClass = "flex items-start gap-3 p-2.5 px-3.5 bg-surface-alt border border-border rounded-lg transition-all duration-150 text-[14px] leading-relaxed ";
           let optKeyClass = "min-w-[22px] h-[22px] rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 ";
+          let optState = "default";
           
           if (isSubmitted) {
             const isCorrect = Array.isArray(question.answer) ? question.answer.includes(i) : question.answer === i;
@@ -24,11 +25,14 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
             if (isCorrect) {
               optionClass += "border-success bg-success-light ";
               optKeyClass += "bg-success text-white";
+              optState = "correct";
             } else if (isSelected) {
               optionClass += "border-danger bg-danger-light ";
               optKeyClass += "bg-danger text-white";
+              optState = "wrong";
             } else {
               optKeyClass += "bg-border text-text-secondary";
+              optState = "unselected";
             }
           } else {
             const isSel = Array.isArray(selected) ? selected.includes(i) : selected === i;
@@ -36,13 +40,15 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
             if (isSel && selected !== undefined) {
               optionClass += "border-primary bg-primary-light ";
               optKeyClass += "bg-primary text-white";
+              optState = "selected";
             } else {
               optKeyClass += "bg-border text-text-secondary";
+              optState = "unselected";
             }
           }
           
           return (
-            <div key={opt} className={optionClass} onClick={isSubmitted ? undefined : () => onToggleOption(globalIdx, i)}>
+            <div key={opt} data-element="option" data-state={optState} className={optionClass} onClick={isSubmitted ? undefined : () => onToggleOption(globalIdx, i)}>
               <span className={optKeyClass}>{keyLabel}</span>
               <div className="min-w-0 flex-1 break-all text-text [&_p]:m-0" dangerouslySetInnerHTML={renderOptionMarkdown(opt)} />
             </div>
@@ -50,7 +56,7 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
         })}
       </div>
       {isSubmitted && (
-        <div className="mt-3.5 p-3.5 bg-primary-muted rounded-lg text-[13px] text-text-secondary leading-relaxed flex flex-col gap-1.5">
+        <div data-element="explanation" className="mt-3.5 p-3.5 bg-primary-muted rounded-lg text-[13px] text-text-secondary leading-relaxed flex flex-col gap-1.5">
           <div><strong className="text-text-strong">正确答案：</strong>{formatAnswer(question, question.answer)}</div>
           {answered !== undefined && !isAnswerCorrect(question, answered) && (
             <div><strong className="text-text-strong">你的答案：</strong>{formatAnswer(question, answered)}</div>
@@ -62,7 +68,7 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
             />
           )}
           {question._moduleId && (
-            <div className="mt-2.5 pt-2.5 border-t border-primary/18 flex items-center gap-2 flex-wrap text-text-secondary">
+            <div data-element="recommend-link" className="mt-2.5 pt-2.5 border-t border-primary/18 flex items-center gap-2 flex-wrap text-text-secondary">
               <span>推荐阅读：</span>
               <button className="border-0 bg-transparent text-secondary cursor-pointer text-[13px] font-semibold p-0 hover:underline" onClick={() => onReadChapter(question._moduleId, question._docIdx)}>
                 {question._moduleName} / {question._docTitle}

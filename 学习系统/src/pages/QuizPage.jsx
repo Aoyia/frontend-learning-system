@@ -13,15 +13,15 @@ export function QuizPage({ quizState, onToggleOption, onSubmitPage, onNextPage, 
   const allSelected = isSubmitted || unansweredCount === 0;
 
   return (
-    <div className="max-w-[760px] mx-auto">
-      <div className="mb-7">
+    <div data-component="quiz-page" className="max-w-[760px] mx-auto">
+      <div data-element="quiz-header" className="mb-7">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-[22px] font-bold mb-1.5 text-text-strong">{quizState.type === 'doc' ? '📝 随堂作业' : quizState.type === 'wrongbook' ? '🧩 错题练习' : quizState.type === 'breaker' ? '🗺️ 卡片自测' : '🎯 模块刷题'}</h2>
           <div className="flex items-center gap-2.5">
             <span className="text-[13px] text-text-secondary">第 {quizState.currentPageIdx + 1} / {totalPages} 页 · 共 {totalQ} 题</span>
           </div>
         </div>
-        <div className="h-1 bg-border rounded-[2px] mt-3 overflow-hidden">
+        <div data-element="progress-bar" className="h-1 bg-border rounded-[2px] mt-3 overflow-hidden">
           <div className="h-full bg-gradient-to-r from-primary to-secondary rounded-[2px] transition-[width] duration-400" style={{ width: `${progress}%` }} />
         </div>
       </div>
@@ -39,7 +39,7 @@ export function QuizPage({ quizState, onToggleOption, onSubmitPage, onNextPage, 
         />
       ))}
 
-      <div className="flex justify-end gap-2.5 mt-5">
+      <div data-element="quiz-actions" className="flex justify-end gap-2.5 mt-5">
         {!isSubmitted && (
           <button
             className="px-5 py-2 rounded-lg border-0 cursor-pointer text-[14px] font-semibold transition-all duration-200 bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"

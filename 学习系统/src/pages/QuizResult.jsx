@@ -9,7 +9,7 @@ export function QuizResult({ quizState, onStartDocQuiz, onNextDoc, onBackModule,
   const hasNextDoc = quizState.type === 'doc' ? quizState.docIdx + 1 < moduleDocLen : false;
 
   return (
-    <div className="max-w-[760px] mx-auto">
+    <div data-component="quiz-result" className="max-w-[760px] mx-auto">
       <div className="text-center py-10 px-5">
         <div className="w-[120px] h-[120px] rounded-full border-4 border-primary flex flex-col items-center justify-center mx-auto mb-5">
           <div className="text-[32px] font-bold text-primary">{pct}%</div>

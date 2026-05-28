@@ -49,7 +49,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
   }, [displayStage.realm]);
 
   return (
-    <div className="pet-panel-mask" onClick={onClose}>
+    <div data-component="pet-panel" className="pet-panel-mask" onClick={onClose}>
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
           <linearGradient id="aura-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -62,6 +62,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
       <section
         ref={panelRef}
         className="pet-panel"
+        data-element="panel-body"
         data-realm={displayStage.realm}
         onClick={(e) => e.stopPropagation()}
       >
@@ -87,7 +88,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
         </div>
 
         {/* 神兽展示区 */}
-        <div className="flex flex-col items-center my-2.5 relative">
+        <div data-element="pet-display" className="flex flex-col items-center my-2.5 relative">
           {isPreviewing && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/15 border border-warning/30 text-warning text-[11px] font-bold tracking-wide mb-2.5 w-fit">✨ 预览境界形态</span>
           )}
@@ -126,7 +127,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
         </div>
 
         {/* 大境界修仙天梯 */}
-        <div className="w-full my-5 relative">
+        <div data-element="realms-ladder" className="w-full my-5 relative">
           <div className="absolute left-2.5 right-2.5 top-1.5 h-[1px] bg-border z-0" />
           <div className="flex justify-between relative z-1">
             {LADDER_STAGES.map(stage => {
@@ -162,12 +163,12 @@ export function PetPanel({ petState, petEvents, onClose }) {
         </div>
 
         {/* 图鉴入口按钮 */}
-        <button className="block mx-auto mt-3 bg-transparent border border-border rounded-lg px-4 py-1.5 text-text-secondary text-[11px] cursor-pointer tracking-widest transition-all duration-250 ease-out hover:border-secondary hover:text-secondary hover:bg-secondary/4" onClick={() => setShowCodices(true)}>
+        <button data-element="open-codex-btn" className="block mx-auto mt-3 bg-transparent border border-border rounded-lg px-4 py-1.5 text-text-secondary text-[11px] cursor-pointer tracking-widest transition-all duration-250 ease-out hover:border-secondary hover:text-secondary hover:bg-secondary/4" onClick={() => setShowCodices(true)}>
           📖 开启神兽图志
         </button>
 
         {/* 底部流式日志走字栏 */}
-        <div className="border-t border-border pt-4 mt-2.5">
+        <div data-element="event-log" className="border-t border-border pt-4 mt-2.5">
           {petEvents.length ? (
             <div className="flex items-center gap-2 text-[11px] text-text-secondary leading-normal bg-surface-alt px-3 py-2 rounded-lg" title="修行历程摘要">
               <span className="text-secondary font-extrabold shrink-0">⚡</span>
@@ -185,7 +186,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
 
         {/* 全屏半透明神兽进化图志 Overlay */}
         {showCodices && (
-          <div className="fixed inset-0 bg-[var(--pet-codex-bg)] backdrop-blur-md z-[600] flex flex-col p-10 overflow-y-auto animate-[pet-fade-in_0.3s_cubic-bezier(0.25,1,0.5,1)_forwards]" onClick={() => setShowCodices(false)}>
+          <div data-element="codex-overlay" className="fixed inset-0 bg-[var(--pet-codex-bg)] backdrop-blur-md z-[600] flex flex-col p-10 overflow-y-auto animate-[pet-fade-in_0.3s_cubic-bezier(0.25,1,0.5,1)_forwards]" onClick={() => setShowCodices(false)}>
             <div className="flex justify-between items-center mb-6" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-[20px] font-extrabold text-text-strong">神兽进化图志</h3>
               <button
@@ -196,7 +197,7 @@ export function PetPanel({ petState, petEvents, onClose }) {
                 ×
               </button>
             </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-4" onClick={(e) => e.stopPropagation()}>
+            <div data-element="codex-grid" className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-4" onClick={(e) => e.stopPropagation()}>
               {PET_STAGES.map(stage => {
                 const unlocked = (petState.xp || 0) >= stage.threshold;
                 const isCurrent = stage.index === view.current.index;

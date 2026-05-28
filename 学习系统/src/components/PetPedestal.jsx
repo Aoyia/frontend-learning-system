@@ -189,6 +189,7 @@ export function PetPedestal({ realm }) {
   return (
     <div
       ref={containerRef}
+      data-component="pet-pedestal"
       className="pet-pedestal-gsap"
       style={{ '--realm-col': cfg.color, '--realm-col-alt': cfg.colorAlt }}
     >

@@ -547,7 +547,7 @@ function App() {
     <>
       {toast && <div className="toast">{toast}</div>}
       {immersiveMode && (
-        <div className={`fixed top-4 right-5 z-[999] flex items-center gap-2.5 bg-surface border border-border rounded-[24px] px-4 py-1.75 shadow-[0_4px_24px_rgba(0,0,0,0.3)] text-[13px] text-text-secondary transition-all duration-400 ease-in-out ${toolbarVisible ? 'opacity-1 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+        <div data-component="immersive-toolbar" className={`fixed top-4 right-5 z-[999] flex items-center gap-2.5 bg-surface border border-border rounded-[24px] px-4 py-1.75 shadow-[0_4px_24px_rgba(0,0,0,0.3)] text-[13px] text-text-secondary transition-all duration-400 ease-in-out ${toolbarVisible ? 'opacity-1 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
           <span>专注阅读</span>
           <div className="w-[1px] h-3.5 bg-border" />
           <button className="flex items-center gap-1.5 bg-transparent border-0 cursor-pointer text-text text-[13px] font-semibold p-0 hover:text-primary" onClick={() => setImmersiveMode(false)}>
@@ -556,10 +556,10 @@ function App() {
         </div>
       )}
       {/* ===== 顶部导航栏：三区布局 [Logo | Tabs | Actions] ===== */}
-      <nav className="sticky top-0 z-[100] h-14 bg-surface border-b border-border flex items-center">
+      <nav data-component="top-nav" className="sticky top-0 z-[100] h-14 bg-surface border-b border-border flex items-center">
 
         {/* 左区：Logo */}
-        <div className="shrink-0 flex items-center gap-2 pl-4 md:pl-6 pr-3 md:pr-4">
+        <div data-element="logo" className="shrink-0 flex items-center gap-2 pl-4 md:pl-6 pr-3 md:pr-4">
           <div className="relative flex items-center justify-center cursor-pointer select-none" onClick={handleLogoPractise}>
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-8 h-8 object-contain" ref={logoImgRef} />
             {flyEffects.map(effect => (
@@ -573,10 +573,12 @@ function App() {
         <div className="shrink-0 w-px h-5 bg-border" />
 
         {/* 中区：导航 Tabs（弹性伸缩，内部可横向滚动） */}
-        <div className="flex-1 min-w-0 overflow-x-auto scrollbar-none flex items-center gap-1 px-2 md:px-3">
+        <div data-element="nav-tabs" className="flex-1 min-w-0 overflow-x-auto scrollbar-none flex items-center gap-1 px-2 md:px-3">
           {PAGES.map(name => (
             <button
               key={name}
+              data-element="nav-tab"
+              data-state={activeNavPage === name ? 'active' : 'inactive'}
               className={`shrink-0 px-3 py-1.5 rounded-lg cursor-pointer text-[13px] md:text-[14px] whitespace-nowrap transition-all duration-200 border-0 font-medium
                 ${activeNavPage === name
                   ? 'bg-primary text-white shadow-sm'
@@ -600,7 +602,7 @@ function App() {
         </div>
 
         {/* 右区：操作按钮组 */}
-        <div className="shrink-0 flex items-center gap-1.5 pr-4 md:pr-6 pl-2">
+        <div data-element="actions" className="shrink-0 flex items-center gap-1.5 pr-4 md:pr-6 pl-2">
           <PetWidget petState={petState} onOpen={() => setPetPanelOpen(true)} />
           <button
             className="w-9 h-9 flex items-center justify-center rounded-lg border border-border bg-surface-alt text-[16px] cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary"
@@ -621,7 +623,7 @@ function App() {
             onNavToDoc={navToDoc}
           />
         )}
-        <main className={`content flex-1 overflow-y-auto ${page === 'breaker' && !currentBreakerNodeId ? 'p-0 overflow-hidden' : 'p-8 px-12 max-md:p-4 max-md:px-5 max-md:pb-18'}`} ref={contentRef}>
+        <main data-element="main-content" className={`content flex-1 overflow-y-auto ${page === 'breaker' && !currentBreakerNodeId ? 'p-0 overflow-hidden' : 'p-8 px-12 max-md:p-4 max-md:px-5 max-md:pb-18'}`} ref={contentRef}>
           {page === 'home' && (
             <Home
               progressCache={progressCache}

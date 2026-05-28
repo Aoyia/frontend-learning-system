@@ -10,7 +10,7 @@ export function WrongBookPage({ wrongBookCache, onStartWrongBook, onReadChapter 
 
   if (!total) {
     return (
-      <div className="max-w-[700px] mx-auto">
+      <div data-component="wrong-book-page" className="max-w-[700px] mx-auto">
         <h2 className="text-[22px] font-bold mb-1.5 text-text-strong">🧩 错题本</h2>
         <p className="text-text-secondary text-[13px] mb-6">错题会在作业和刷题提交后自动收集，答对后自动移出错题本。</p>
         <div className="text-center py-15 px-5 text-text-secondary">
@@ -25,7 +25,7 @@ export function WrongBookPage({ wrongBookCache, onStartWrongBook, onReadChapter 
   }
 
   return (
-    <div className="max-w-[700px] mx-auto">
+    <div data-component="wrong-book-page" className="max-w-[700px] mx-auto">
       <h2 className="text-[22px] font-bold mb-1.5 text-text-strong">🧩 错题本</h2>
       <p className="text-text-secondary text-[13px] mb-6">当前共 {total} 道错题。优先练错题，答对后自动移出错题本，再回推荐章节补知识点。</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6">

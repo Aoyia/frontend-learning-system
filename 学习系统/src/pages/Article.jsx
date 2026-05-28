@@ -16,10 +16,10 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
   const diffBadgeColor = diffClass === 'easy' ? 'bg-success-light text-success' : diffClass === 'medium' ? 'bg-warning-light text-warning' : 'bg-danger-light text-danger';
 
   return (
-    <div className={`grid grid-cols-1 ${immersiveMode ? 'xl:grid-cols-[minmax(0,900px)_220px] max-w-[1180px]' : 'xl:grid-cols-[minmax(0,800px)_220px] max-w-[1080px]'} gap-7 items-start justify-center mx-auto`}>
+    <div data-component="article-page" className={`grid grid-cols-1 ${immersiveMode ? 'xl:grid-cols-[minmax(0,900px)_220px] max-w-[1180px]' : 'xl:grid-cols-[minmax(0,800px)_220px] max-w-[1080px]'} gap-7 items-start justify-center mx-auto`}>
       <div className={`w-full mx-auto ${immersiveMode ? 'max-w-[900px]' : 'max-w-[800px]'}`}>
-        <div className="mb-6 pb-5 border-b border-border">
-          <div className="text-[12px] text-text-secondary mb-2">
+        <div data-element="article-meta" className="mb-6 pb-5 border-b border-border">
+          <div data-element="breadcrumb" className="text-[12px] text-text-secondary mb-2">
             <span className="cursor-pointer hover:text-primary" onClick={onHome}>首页</span> / <span className="cursor-pointer hover:text-primary" onClick={onModuleHome}>{module.name}</span> / {doc.title}
           </div>
           <div className="text-[26px] font-bold mb-2 text-text-strong">{doc.title}</div>
@@ -48,10 +48,10 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
             </div>
           )}
         </div>
-        <div className="md-body" dangerouslySetInnerHTML={{ __html: rendered.html }} />
+        <div data-element="article-body" className="md-body" dangerouslySetInnerHTML={{ __html: rendered.html }} />
 
         {!isDone && (
-          <div className="mt-6 p-4 px-5 bg-success-light border border-success/30 rounded-xl flex items-center justify-between gap-4">
+          <div data-element="read-actions" className="mt-6 p-4 px-5 bg-success-light border border-success/30 rounded-xl flex items-center justify-between gap-4">
             <div className="text-[14px] text-success font-semibold">📖 读完了吗？标记为已读，并做随堂作业</div>
             <div className="flex gap-2.5">
               <button className="px-5 py-2 rounded-lg border border-border bg-transparent text-text cursor-pointer text-[14px] font-semibold transition-all duration-200 hover:border-primary hover:text-primary" onClick={() => onMarkDone(module.id, docIdx, false)}>仅标记已读</button>
@@ -61,13 +61,13 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
         )}
 
         {isDone && (
-          <div className="mt-6 flex gap-2.5 flex-wrap">
+          <div data-element="read-actions" className="mt-6 flex gap-2.5 flex-wrap">
             <button className="px-5 py-2 rounded-lg border-0 cursor-pointer text-[14px] font-semibold transition-all duration-200 bg-primary text-white hover:bg-primary-hover" onClick={() => onStartQuiz(module.id, docIdx)}>做随堂作业</button>
             <button className="px-5 py-2 rounded-lg border border-border bg-transparent text-text cursor-pointer text-[14px] font-semibold transition-all duration-200 hover:border-primary hover:text-primary" onClick={onGoDrill}>去模块刷题</button>
           </div>
         )}
 
-        <div className="flex justify-between mt-10 pt-5 border-t border-border gap-3">
+        <div data-element="prev-next" className="flex justify-between mt-10 pt-5 border-t border-border gap-3">
           {prev ? (
             <button className="flex-1 p-3 px-4 bg-surface border border-border rounded-xl cursor-pointer transition-all duration-200 text-[13px] text-text-secondary text-left hover:border-primary hover:text-text" onClick={() => onNavToDoc(module.id, docIdx - 1)}>
               <div className="text-[11px] text-text-secondary mb-1">← 上一篇</div>

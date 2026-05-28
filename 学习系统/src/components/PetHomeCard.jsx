@@ -3,10 +3,10 @@ import { getPetView } from '../utils/pet.js';
 export function PetHomeCard({ petState, onOpen }) {
   const view = getPetView(petState);
   return (
-    <section className="flex flex-col sm:flex-row items-center gap-6 md:gap-8 bg-surface border border-border rounded-xl p-5 md:p-6 transition-all duration-200 hover:border-primary hover:shadow-[0_8px_30px_rgba(108,99,255,0.08)] bg-gradient-to-br from-surface to-surface-alt/30">
+    <section data-component="pet-home-card" className="flex flex-col sm:flex-row items-center gap-6 md:gap-8 bg-surface border border-border rounded-xl p-5 md:p-6 transition-all duration-200 hover:border-primary hover:shadow-[0_8px_30px_rgba(108,99,255,0.08)] bg-gradient-to-br from-surface to-surface-alt/30">
       
       {/* 左侧：战宠法相浮动预览 */}
-      <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-surface-alt border border-border flex items-center justify-center shrink-0 relative p-1.5 shadow-inner bg-gradient-to-tr from-primary/5 to-secondary/5 group">
+      <div data-element="pet-avatar" className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-surface-alt border border-border flex items-center justify-center shrink-0 relative p-1.5 shadow-inner bg-gradient-to-tr from-primary/5 to-secondary/5 group">
         <img
           src={view.current.image}
           alt={view.current.name}
@@ -15,12 +15,13 @@ export function PetHomeCard({ petState, onOpen }) {
       </div>
 
       {/* 右侧：核心数据与修为进度 */}
-      <div className="flex-1 flex flex-col gap-3 w-full">
+      <div data-element="pet-info" className="flex-1 flex flex-col gap-3 w-full">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <span className="text-primary font-bold text-[10px] tracking-wider uppercase bg-primary-light border border-primary/20 rounded px-2 py-0.5">
             今日修行
           </span>
           <button
+            data-element="action-btn"
             className="px-3 py-1.5 rounded-lg border-0 cursor-pointer text-[12px] font-semibold transition-all duration-200 bg-primary text-white hover:bg-primary-hover shadow-sm"
             onClick={onOpen}
           >

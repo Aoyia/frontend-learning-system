@@ -3,7 +3,7 @@ import { DEFAULT_DRILL_LIMIT, QUICK_DRILL_LIMIT } from '../utils/quiz.js';
 
 export function DrillSelect({ drillStatCache, onStartDrill }) {
   return (
-    <div className="max-w-[700px] mx-auto">
+    <div data-component="drill-select" className="max-w-[700px] mx-auto">
       <h2 className="text-[22px] font-bold mb-1.5 text-text-strong">🎯 模块刷题</h2>
       <p className="text-text-secondary text-[13px] mb-6">默认轻量练习 20 题，先完成一小批，再根据错题和未练题持续循环。</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6">

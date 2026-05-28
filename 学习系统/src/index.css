@@ -67,10 +67,10 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #f6f8fc;
+  --bg: #f8fafc;
   --surface: #ffffff;
-  --surface2: #eef2fb;
-  --border: #d7deef;
+  --surface2: #f1f5f9;
+  --border: #e2e8f0;
   --accent: #315efb;
   --accent2: #0ea5a4;
   --text: #1f2937;

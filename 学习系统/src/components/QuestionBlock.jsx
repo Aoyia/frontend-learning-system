@@ -8,11 +8,6 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
   return (
     <div className="bg-surface border border-border rounded-xl p-6 mb-4" id={`qq-${globalIdx}`}>
       <div className="text-[12px] text-text-secondary mb-2.5">第 {globalIdx + 1} 题 · {typeLabel}</div>
-      {question._moduleName && question._docTitle && (
-        <div className="w-fit max-w-full -mt-0.5 mx-0 mb-3 px-2.25 py-1.25 border border-primary/18 rounded-md bg-primary/7 text-text-secondary text-[12px] leading-normal break-all">
-          {question._moduleName} / {question._docTitle}
-        </div>
-      )}
       <div className="text-[16px] font-medium leading-relaxed mb-5 text-text-strong">{question.question}</div>
       <div className="flex flex-col gap-2.5">
         {question.options.map((opt, i) => {

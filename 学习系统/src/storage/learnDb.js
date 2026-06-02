@@ -28,6 +28,11 @@ export function dbGetAll(db, store) {
 }
 
 export function dbPut(db, store, value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (!value.updatedAt) {
+      value.updatedAt = Date.now();
+    }
+  }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, 'readwrite');
     const req = tx.objectStore(store).put(value);

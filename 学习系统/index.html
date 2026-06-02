@@ -16,11 +16,183 @@
       window.history.replaceState(null, '', base + redirect);
     })();
   </script>
+  <script>
+    // 在页面渲染前从 localStorage 中同步读取并应用主题，防止暗黑/亮色模式切换时的屏幕闪烁
+    (function () {
+      var savedTheme = localStorage.getItem('learn-theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+  <style>
+    #initial-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      transition: background-color 0.3s ease;
+    }
+    
+    /* 极致大气的自适应黑白主题配置 */
+    html[data-theme="light"] #initial-loader {
+      background-color: #ffffff;
+      --loader-color: #0f172a;
+      --loader-text: #64748b;
+      --grad-start: #315efb; /* 优雅法兰西蓝 */
+      --grad-end: #0ea5a4;   /* 极简青 */
+      --track-color: rgba(15, 23, 42, 0.06);
+    }
+    html[data-theme="dark"] #initial-loader {
+      background-color: #0f1117;
+      --loader-color: #f1f5f9;
+      --loader-text: #64748b;
+      --grad-start: #00f2fe; /* 荧光青蓝 */
+      --grad-end: #6c63ff;   /* 极光紫 */
+      --track-color: rgba(241, 245, 249, 0.06);
+    }
+    #initial-loader {
+      background-color: #0f1117;
+      --loader-color: #f1f5f9;
+      --loader-text: #64748b;
+      --grad-start: #00f2fe;
+      --grad-end: #6c63ff;
+      --track-color: rgba(241, 245, 249, 0.06);
+    }
+
+    .loader-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+    
+    .loader-spinner {
+      width: 96px;
+      height: 58px;
+      overflow: visible;
+      transform-origin: center;
+      animation: apple-spinner-breathe 3s ease-in-out infinite;
+    }
+    
+    /* 渐变节点颜色映射 */
+    .grad-start { stop-color: var(--grad-start); }
+    .grad-end { stop-color: var(--grad-end); }
+    
+    .loader-spinner .track {
+      stroke: var(--track-color);
+      stroke-width: 4.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.04; /* 极致轻薄的隐约轨迹线 */
+      transition: stroke 0.25s ease;
+    }
+    
+    /* ♾️ 共享滑动路径基础配置 */
+    .loader-spinner .path {
+      stroke: var(--loader-color);
+      stroke-width: 4.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      opacity: 0.85;
+      transition: stroke 0.25s ease;
+      animation: cosine-dash 1.8s linear infinite;
+    }
+    
+    /* 简洁大气的高雅文字：细体、大字母间距、配合极为优雅平缓的呼吸动效 */
+    .loader-text {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.25em;
+      color: var(--loader-text);
+      margin: 0;
+      text-transform: uppercase;
+      padding-left: 0.25em; /* 完美水平居中 */
+      transition: color 0.25s ease;
+      animation: apple-text-pulse 3s ease-in-out infinite;
+    }
+
+    /* 慢速高雅的文本渐变呼吸 */
+    @keyframes apple-text-pulse {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 0.9; }
+    }
+
+    /* 
+       利用简谐运动余弦公式对光束长度进行周期控制：L(d) = 28 + 12 * cos(4 * pi * d / 100)
+       - 当滑行到两侧大圆弧时 (0% 和 50%)，由于离心力线段拉伸至最长 40
+       - 当滑行到中间交叉狭窄切点时 (25% 和 75%)，由于挤压力线段收缩至最短 16
+       - 配合双倍长度路径 (pathLength=200)，空白段宽度设为 200 以保证尾部正确消隐
+    */
+    @keyframes cosine-dash {
+      0% {
+        stroke-dasharray: 40, 200;
+        stroke-dashoffset: 0;
+      }
+      25% {
+        stroke-dasharray: 16, 200;
+        stroke-dashoffset: -25;
+      }
+      50% {
+        stroke-dasharray: 40, 200;
+        stroke-dashoffset: -50;
+      }
+      75% {
+        stroke-dasharray: 16, 200;
+        stroke-dashoffset: -75;
+      }
+      100% {
+        stroke-dasharray: 40, 200;
+        stroke-dashoffset: -100;
+      }
+    }
+    @keyframes apple-spinner-breathe {
+      0%, 100% {
+        transform: scale(0.96);
+        opacity: 0.75;
+      }
+      50% {
+        transform: scale(1.02);
+        opacity: 0.98;
+      }
+    }
+  </style>
   <!-- 样式已由 Tailwind CSS v4 和 src/index.css 接管 -->
 </head>
 <body>
 
-<div id="root"></div>
+<div id="root">
+  <div id="initial-loader">
+    <div class="loader-content">
+      <svg class="loader-spinner" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- 
+            完美的伯努利双纽线双倍周期的数学采样轨迹 (720度连续闭环)。
+            锁定总长 pathLength 为 200。线段滑到 100% (offset=-100) 重置到 0% 时，
+            因为第二圈 (100-200) 与第一圈 (0-100) 轨迹完全重合，可实现瞬间隐形跳转，彻底消除衔接时的闪烁与变短问题。
+          -->
+          <path id="infinity-path" d="M 80.000 30.000 L 79.877 31.564 L 79.513 33.085 L 78.923 34.525 L 78.129 35.848 L 77.159 37.029 L 76.045 38.048 L 74.820 38.895 L 73.516 39.565 L 72.162 40.062 L 70.785 40.392 L 69.404 40.568 L 68.038 40.603 L 66.700 40.510 L 65.399 40.304 L 64.142 40.000 L 62.932 39.610 L 61.771 39.148 L 60.658 38.622 L 59.592 38.045 L 58.571 37.423 L 57.592 36.765 L 56.651 36.076 L 55.744 35.363 L 54.868 34.629 L 54.017 33.880 L 53.188 33.118 L 52.376 32.346 L 51.577 31.568 L 50.786 30.785 L 50.000 30.000 L 49.214 29.215 L 48.423 28.432 L 47.624 27.654 L 46.812 26.882 L 45.983 26.120 L 45.132 25.371 L 44.256 24.637 L 43.349 23.924 L 42.408 23.235 L 41.429 22.577 L 40.408 21.955 L 39.342 21.378 L 38.229 20.852 L 37.068 20.390 L 35.858 20.000 L 34.601 19.696 L 33.300 19.490 L 31.962 19.397 L 30.596 19.432 L 29.215 19.608 L 27.838 19.938 L 26.484 20.435 L 25.180 21.105 L 23.955 21.952 L 22.841 22.971 L 21.871 24.152 L 21.077 25.475 L 20.487 26.915 L 20.123 28.436 L 20.000 30.000 L 20.123 31.564 L 20.487 33.085 L 21.077 34.525 L 21.871 35.848 L 22.841 37.029 L 23.955 38.048 L 25.180 38.895 L 26.484 39.565 L 27.838 40.062 L 29.215 40.392 L 30.596 40.568 L 31.962 40.603 L 33.300 40.510 L 34.601 40.304 L 35.858 40.000 L 37.068 39.610 L 38.229 39.148 L 39.342 38.622 L 40.408 38.045 L 41.429 37.423 L 42.408 36.765 L 43.349 36.076 L 44.256 35.363 L 45.132 34.629 L 45.983 33.880 L 46.812 33.118 L 47.624 32.346 L 48.423 31.568 L 49.214 30.785 L 50.000 30.000 L 50.786 29.215 L 51.577 28.432 L 52.376 27.654 L 53.188 26.882 L 54.017 26.120 L 54.868 25.371 L 55.744 24.637 L 56.651 23.924 L 57.592 23.235 L 58.571 22.577 L 59.592 21.955 L 60.658 21.378 L 61.771 20.852 L 62.932 20.390 L 64.142 20.000 L 65.399 19.696 L 66.700 19.490 L 68.038 19.397 L 69.404 19.432 L 70.785 19.608 L 72.162 19.938 L 73.516 20.435 L 74.820 21.105 L 76.045 21.952 L 77.159 22.971 L 78.129 24.152 L 78.923 25.475 L 79.513 26.915 L 79.877 28.436 L 80.000 30.000 L 79.877 31.564 L 79.513 33.085 L 78.923 34.525 L 78.129 35.848 L 77.159 37.029 L 76.045 38.048 L 74.820 38.895 L 73.516 39.565 L 72.162 40.062 L 70.785 40.392 L 69.404 40.568 L 68.038 40.603 L 66.700 40.510 L 65.399 40.304 L 64.142 40.000 L 62.932 39.610 L 61.771 39.148 L 60.658 38.622 L 59.592 38.045 L 58.571 37.423 L 57.592 36.765 L 56.651 36.076 L 55.744 35.363 L 54.868 34.629 L 54.017 33.880 L 53.188 33.118 L 52.376 32.346 L 51.577 31.568 L 50.786 30.785 L 50.000 30.000 L 49.214 29.215 L 48.423 28.432 L 47.624 27.654 L 46.812 26.882 L 45.983 26.120 L 45.132 25.371 L 44.256 24.637 L 43.349 23.924 L 42.408 23.235 L 41.429 22.577 L 40.408 21.955 L 39.342 21.378 L 38.229 20.852 L 37.068 20.390 L 35.858 20.000 L 34.601 19.696 L 33.300 19.490 L 31.962 19.397 L 30.596 19.432 L 29.215 19.608 L 27.838 19.938 L 26.484 20.435 L 25.180 21.105 L 23.955 21.952 L 22.841 22.971 L 21.871 24.152 L 21.077 25.475 L 20.487 26.915 L 20.123 28.436 Z" fill="none" pathLength="200" />
+        </defs>
+        
+        <!-- ♾️ 背景辅助轨道 -->
+        <use href="#infinity-path" class="track" fill="none" />
+        
+        <!-- ♾️ 单根优雅光束：运用余弦波物理律动收缩伸展 -->
+        <use href="#infinity-path" class="path" fill="none" />
+      </svg>
+      <p class="loader-text">Loading</p>
+    </div>
+  </div>
+</div>
 <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

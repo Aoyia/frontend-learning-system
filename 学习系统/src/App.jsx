@@ -18,6 +18,8 @@ import Sidebar from './components/Sidebar.jsx';
 import AnswerCard from './components/AnswerCard.jsx';
 import { PetWidget } from './components/PetWidget.jsx';
 import { PetPanel } from './components/PetPanel.jsx';
+import { supabase } from './storage/supabaseClient.js';
+import { SyncModal } from './components/SyncModal.jsx';
 import {
   DEFAULT_DRILL_LIMIT,
   createQuizState,
@@ -75,6 +77,46 @@ function App() {
   const logoImgRef = useRef(null);
   const logoSpeedRef = useRef(0);
   const [flyEffects, setFlyEffects] = useState([]);
+  const [user, setUser] = useState(null);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+
+  // 监听 Supabase 登录状态变化
+  useEffect(() => {
+    if (!supabase) return;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // 同步完成后重载本地 IndexedDB 缓存并刷新视图
+  async function reloadLocalCaches() {
+    if (!db) return;
+    const { dbGetAll } = await import('./storage/learnDb.js');
+    const { PET_STATE_ID, createDefaultPetState } = await import('./utils/pet.js');
+    
+    const progress = await dbGetAll(db, 'progress');
+    const stats = await dbGetAll(db, 'drillStat');
+    const wrongBook = await dbGetAll(db, 'wrongBook');
+    const savedPetState = await dbGetAll(db, 'petState');
+    const savedPetEvents = await dbGetAll(db, 'petEvents');
+    
+    setProgressCache(Object.fromEntries(progress.map(r => [r.id, r.done])));
+    setDrillStatCache(Object.fromEntries(stats.map(r => [r.qid, r])));
+    setWrongBookCache(Object.fromEntries(wrongBook.filter(r => !r.isDeleted).map(r => [r.qid, r])));
+    setPetState(savedPetState.find(r => r.id === PET_STATE_ID) || createDefaultPetState());
+    setPetEvents(savedPetEvents.sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 12));
+    
+    showToast('云端数据同步成功！');
+  }
 
   useEffect(() => {
     const logo = logoImgRef.current;
@@ -453,7 +495,7 @@ function App() {
         delete next[question._qid];
         return next;
       });
-      await dbDelete(db, 'wrongBook', question._qid);
+      await dbPut(db, 'wrongBook', { qid: question._qid, isDeleted: true, updatedAt: Date.now() });
       return;
     }
     const prev = wrongBookCache[question._qid];
@@ -601,9 +643,17 @@ function App() {
           ))}
         </div>
 
-        {/* 右区：操作按钮组 */}
         <div data-element="actions" className="shrink-0 flex items-center gap-1.5 pr-4 md:pr-6 pl-2">
           <PetWidget petState={petState} onOpen={() => setPetPanelOpen(true)} />
+          <button
+            className={`w-9 h-9 flex items-center justify-center rounded-lg border cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary ${
+              user ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-surface-alt border-border'
+            }`}
+            onClick={() => setSyncModalOpen(true)}
+            title={user ? `云同步已连接: ${user.email} (点击管理)` : '云同步未连接 (点击登录)'}
+          >
+            {user ? '☁️' : '🔄'}
+          </button>
           <button
             className="w-9 h-9 flex items-center justify-center rounded-lg border border-border bg-surface-alt text-[16px] cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary"
             onClick={toggleTheme}
@@ -733,6 +783,14 @@ function App() {
           onClose={() => setPetPanelOpen(false)}
         />
       )}
+      <SyncModal
+        isOpen={syncModalOpen}
+        onClose={() => setSyncModalOpen(false)}
+        db={db}
+        user={user}
+        onSyncComplete={reloadLocalCaches}
+        onAuthChange={setUser}
+      />
     </>
   );
 }

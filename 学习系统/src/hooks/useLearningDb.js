@@ -23,7 +23,7 @@ export function useLearningDb() {
       setDb(database);
       setProgressCache(Object.fromEntries(progress.map(r => [r.id, r.done])));
       setDrillStatCache(Object.fromEntries(stats.map(r => [r.qid, r])));
-      setWrongBookCache(Object.fromEntries(wrongBook.map(r => [r.qid, r])));
+      setWrongBookCache(Object.fromEntries(wrongBook.filter(r => !r.isDeleted).map(r => [r.qid, r])));
       setPetState(savedPetState.find(r => r.id === PET_STATE_ID) || createDefaultPetState());
       setPetEvents(savedPetEvents.sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 12));
     });

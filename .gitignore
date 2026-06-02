@@ -6,3 +6,10 @@ dist/
 # Private local interview prep content. Do not publish to the public repository.
 面试准备资料/
 学习系统/docs/博客文档/项目准备/
+
+# Local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+学习系统/.env.local

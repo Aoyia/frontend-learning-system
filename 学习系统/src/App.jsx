@@ -566,7 +566,7 @@ function App() {
               <span key={effect.id} className="logo-fly-text">{effect.text}</span>
             ))}
           </div>
-          <span className="hidden sm:block text-[15px] font-bold text-primary whitespace-nowrap">前端知识库</span>
+          <span className="hidden sm:block text-[15px] font-bold text-primary whitespace-nowrap">中高级前端知识对齐</span>
         </div>
 
         {/* 分隔线 */}

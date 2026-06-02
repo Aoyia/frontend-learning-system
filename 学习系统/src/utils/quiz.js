@@ -155,9 +155,9 @@ export function formatAnswer(question, answer) {
   const toText = idx => {
     if (idx === undefined || idx === null) return '未选择';
     if (question.type === 'judgment') return question.options[idx] || '未选择';
-    return `${'ABCDEF'[idx]}. ${question.options[idx] || ''}`;
+    return 'ABCDEF'[idx] || '未选择';
   };
-  return Array.isArray(answer) ? answer.map(toText).join('；') : toText(answer);
+  return Array.isArray(answer) ? answer.map(toText).join(', ') : toText(answer);
 }
 
 export function sourceTypeLabel(type) {

@@ -1019,9 +1019,9 @@ Vue 3.5 的做法：effect 运行前调用 `prepareDeps`（标记所有 link 为
 
 ## 十二、高级主题：effectScope 副作用作用域
 
-effectScope 是 Vue 3.2 引入的 API，用于批量管理和销毁副作用函数。这在组件卸载、SSR、状态管理库中至关重要。
+`effectScope` 是 Vue 3.2 引入的 API，用于批量管理和销毁副作用函数。这在组件卸载、SSR、状态管理库（如 Pinia）中至关重要。
 
-### 1. 核心实现
+### 1. 核心实现与构造函数
 
 ```javascript
 export class EffectScope {
@@ -1031,6 +1031,15 @@ export class EffectScope {
   scopes: EffectScope[] | undefined  // 子scope
   parent: EffectScope | undefined
   
+  constructor(detached = false) {
+    // 如果不是独立（detached）模式，且当前存在活跃的父作用域
+    if (!detached && activeEffectScope) {
+      this.parent = activeEffectScope
+      // 将当前 scope 记录到父 scope 的子 scopes 数组中
+      ;(activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(this)
+    }
+  }
+
   run<T>(fn: () => T): T | undefined {
     if (this.active) {
       const currentEffectScope = activeEffectScope
@@ -1045,18 +1054,30 @@ export class EffectScope {
   
   stop(fromParent?: boolean): void {
     if (this.active) {
-      // 停止所有 effect
-      for (const effect of this.effects) {
-        effect.stop()
+      let i, l
+      // 停止所有收集到的副作用
+      for (i = 0, l = this.effects.length; i < l; i++) {
+        this.effects[i].stop()
       }
-      // 执行所有清理函数
-      for (const cleanup of this.cleanups) {
-        cleanup()
+      // 执行所有清理回调函数
+      for (i = 0, l = this.cleanups.length; i < l; i++) {
+        this.cleanups[i]()
       }
       // 递归停止子 scope
       if (this.scopes) {
-        for (const scope of this.scopes) {
-          scope.stop(true)
+        for (i = 0, l = this.scopes.length; i < l; i++) {
+          this.scopes[i].stop(true)
+        }
+      }
+      
+      // 如果是从父作用域触发的 stop，或者自身是子作用域，需要从父级 scopes 数组中移除自己
+      if (this.parent && !fromParent) {
+        const last = this.parent.scopes.pop()
+        if (last && last !== this) {
+          const index = this.parent.scopes.indexOf(this)
+          if (index > -1) {
+            this.parent.scopes[index] = last
+          }
         }
       }
       this.active = false
@@ -1065,9 +1086,21 @@ export class EffectScope {
 }
 ```
 
-### 2. 为什么需要 effectScope？
+### 2. 全局变量追踪与副作用收集机制
 
-最典型的场景是 **Pinia 等状态管理库**。store 中可能创建多个 computed、watch，当 store 需要被销毁时，必须一次性清除所有副作用：
+Vue 内部维护了一个全局变量 `activeEffectScope`，用于追踪当前正在执行的副作用作用域。
+
+1. **进入作用域**：当调用 `scope.run(fn)` 时，会将当前 `activeEffectScope` 暂存，然后将 `activeEffectScope` 指向该 `scope` 实例并执行 `fn`。执行完毕后在 `finally` 块中恢复原先的 `activeEffectScope`。
+2. **副作用隐式收集**：在 `run` 的同步执行期间，所有新创建的响应式 API（如 `computed`、`watch`、`watchEffect`）在底层构造器 `new ReactiveEffect` 实例化时，都会检测全局的 `activeEffectScope`，如果存在且活跃，则自动调用 `activeEffectScope.effects.push(this)` 将当前副作用实例登记到该作用域中。
+
+### 3. 嵌套与 Detached（独立）作用域管理
+
+- **普通嵌套**：默认情况下，在活跃的 `parentScope.run` 内部创建 `childScope` 时，`childScope` 会记录 `parent`，并且父级作用域会将其加入子集 `scopes`。父级作用域调用 `stop()` 时会递归将其注销。
+- **独立模式（Detached）**：如果创建时指定 `detached: true`（如 `effectScope(true)`），即使当前处于某个活跃的 `activeEffectScope` 中，它也不会建立与父作用域的绑定，从而保持独立（不会随着父作用域的销毁而被一并销毁），常用于跨生命周期的全局单例服务或缓存管理。
+
+### 4. 为什么需要 effectScope？
+
+最典型的场景是 **Pinia 等状态管理库**。store 中可能创建多个 computed、watch，当 store 需要被销毁或局部注销时，必须一次性清除所有副作用：
 
 ```javascript
 const scope = effectScope()
@@ -1080,17 +1113,20 @@ scope.run(() => {
   watchEffect(() => console.log('Count: ', doubled.value))
 })
 
-// 一次性停止所有 effect、computed、watch
+// 一次性停止所有 effect、computed、watch，防止游离副作用导致内存泄漏
 scope.stop()
 ```
 
-### 3. 与组件生命周期的关系
+### 5. 与组件生命周期的关系
 
-每个 Vue 组件在 setup 执行时，内部都会创建一个 effectScope。组件卸载时（`unmount`），调用 `scope.stop()` 自动清理该组件内的所有响应式副作用。源码在 [`packages/runtime-core/src/component.ts`](https://github.com/vuejs/core/blob/main/packages/runtime-core/src/component.ts)：
+每个 Vue 组件在 setup 执行时，内部都会创建一个默认隐式为 `detached` 模式的 `EffectScope`：
 
 ```javascript
+// packages/runtime-core/src/component.ts
 instance.scope = new EffectScope(true /* detached */)
 ```
+
+在组件卸载时（`unmount`），Vue 内部会自动调用该作用域的 `stop` 方法，一键清理整个组件生命周期内产生的所有响应式副作用（如 watch 等）。
 
 ## 十三、高级主题：watch / watchEffect 底层实现
 

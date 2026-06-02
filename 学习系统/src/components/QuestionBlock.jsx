@@ -73,9 +73,14 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
           {question._moduleId && (
             <div data-element="recommend-link" className="mt-2.5 pt-2.5 border-t border-primary/18 flex items-center gap-2 flex-wrap text-text-secondary">
               <span>推荐阅读：</span>
-              <button className="border-0 bg-transparent text-secondary cursor-pointer text-[13px] font-semibold p-0 hover:underline" onClick={() => onReadChapter(question._moduleId, question._docIdx)}>
+              <a
+                href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/learn/${question._moduleId}/${question._docIdx}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-secondary cursor-pointer text-[13px] font-semibold p-0 hover:underline"
+              >
                 {question._moduleName} / {question._docTitle}
-              </button>
+              </a>
             </div>
           )}
         </div>

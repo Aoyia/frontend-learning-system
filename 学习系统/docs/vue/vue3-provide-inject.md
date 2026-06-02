@@ -744,17 +744,17 @@ D. 插件提供全局服务或配置
 
 ### Q10 [single]
 在 Vue 3 中，通过全局应用实例 `app.provide()` 提供的数据最终主要存在哪里？
-A. appContext.provides
+A. app._context.provides (即 appContext.provides)
 B. window.__VUE_PROVIDES__
 C. 每个组件的 props
 D. Pinia store
 答案：A
 解析:
 💡 它解决了什么问题：
-如果不设计一个应用级的应用上下文 `appContext.provides`，而是让每个 app 实例的全局 provide 都在每个组件创建时强行塞入组件实例中，不仅会导致根组件创建前的 provides 分配无序，还会让多个并存的 app 实例（例如在微前端或 SSR 场景下）的全局注入发生命名空间冲突和内存泄露。
+如果不设计一个应用级的应用上下文 `appContext.provides`，而是让每个 app 实例的全局 provide 都在每个组件创建时强行塞入组件实例中，不仅会导致根组件创建前的 provides 分配无序，还会让多个并存 of app 实例（例如在微前端或 SSR 场景下）的全局注入发生命名空间冲突和内存泄露。
 
 🔍 核心原理解析（防拷打）：
-1. `app.provide(key, value)` 会直接写在应用实例的 `appContext.provides[key] = value` 上。
+1. `app.provide(key, value)` 会直接写在应用实例的 `app._context.provides[key] = value`（即上下文对象 `appContext.provides`）上。
 2. 当渲染根组件（Root Component）并调用 `createComponentInstance` 时，它的 `provides` 指针是基于 `Object.create(appContext.provides)` 来初始化的。这让所有的组件在溯源原型链时，都能在最顶层寻址到应用上下文提供的全局依赖。
 3. 进一步拓展大厂面试追问：如果中间某个组件调用了 `provide` 重写了全局 app 提供的某个 key，那么会影响到其它子树上 inject 相同 key 的组件吗？完全不会。因为中间组件的 `Object.create(parentProvides)` 为其自身的子树切分出了独立的隐式原型节点，重写只会遮蔽该组件以下的子树，其它无关联的兄弟子树在原型链向上回溯时，依然只能寻址到最顶端的 `appContext.provides`。
 

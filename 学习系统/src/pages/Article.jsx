@@ -16,8 +16,9 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
   const diffBadgeColor = diffClass === 'easy' ? 'bg-success-light text-success' : diffClass === 'medium' ? 'bg-warning-light text-warning' : 'bg-danger-light text-danger';
 
   return (
-    <div data-component="article-page" className={`grid grid-cols-1 ${immersiveMode ? 'xl:grid-cols-[minmax(0,900px)_220px] max-w-[1180px]' : 'xl:grid-cols-[minmax(0,800px)_220px] max-w-[1080px]'} gap-7 items-start justify-center mx-auto`}>
-      <div className={`w-full mx-auto ${immersiveMode ? 'max-w-[900px]' : 'max-w-[800px]'}`}>
+    <div data-component="article-page" className={`grid grid-cols-1 ${immersiveMode ? 'xl:grid-cols-[220px_minmax(0,720px)_220px] max-w-[1220px]' : 'xl:grid-cols-[minmax(0,800px)_220px] max-w-[1080px]'} gap-7 items-start justify-center mx-auto`}>
+      {immersiveMode && <div className="hidden xl:block" />}
+      <div className={`w-full mx-auto ${immersiveMode ? 'max-w-[720px]' : 'max-w-[800px]'}`}>
         <div data-element="article-meta" className="mb-6 pb-5 border-b border-border">
           <div data-element="breadcrumb" className="text-[12px] text-text-secondary mb-2">
             <span className="cursor-pointer hover:text-primary" onClick={onHome}>首页</span> / <span className="cursor-pointer hover:text-primary" onClick={onModuleHome}>{module.name}</span> / {doc.title}

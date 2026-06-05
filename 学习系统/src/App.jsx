@@ -711,7 +711,7 @@ function App() {
         </div>
       </nav>
 
-      <div className="flex-1 flex overflow-hidden h-[calc(100vh-56px)] relative">
+      <div className={`flex-1 flex overflow-hidden ${immersiveMode ? 'h-screen' : 'h-[calc(100vh-56px)]'} relative`}>
         {page === 'learn' && currentModule && (
           <Sidebar
             currentModuleId={currentModuleId}

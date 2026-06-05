@@ -1138,6 +1138,16 @@ body {
   animation: apple-text-pulse 3s ease-in-out infinite;
 }
 
+/* ========== IMMERSIVE MODE STYLES ========== */
+html[data-immersive="true"] nav[data-component="top-nav"] {
+  display: none !important;
+}
+
+html[data-immersive="true"] aside[data-component="sidebar"] {
+  display: none !important;
+}
+
+
 
 
 

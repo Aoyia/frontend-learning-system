@@ -1,7 +1,7 @@
 ---
-title: 前端工程化核心原理与面试系统复盘
+title: 前端工程化核心原理与面试系统复盘（腾讯面试/大厂拷打）
 difficulty: 进阶
-tags: [engineering, vite, webpack, tree-shaking, hmr, monorepo, module-federation]
+tags: [engineering, vite, webpack, tree-shaking, hmr, monorepo, module-federation, 腾讯面试, 大厂拷打]
 module: engineering
 order: 1
 ---
@@ -452,3 +452,86 @@ D. 只有预构建后才能使用 TypeScript
 1. 模块格式的一致性归一（Format Normalization）：尽管现代浏览器支持 ESM，但在 NPM 生态中仍有大量历史包采用 CommonJS 格式。Vite 的依赖预构建利用 Go 编写的 esbuild，将这些 CJS 或 UMD 格式的包物理转译并统一输出为标准的 ESM 产物，使浏览器可以直接通过 `import` 加载。
 2. 物理文件合并（Module Consolidation）：许多 ESM 包（如 `lodash-es`）内部结构极其细碎，含有数百个小 JS 文件。如果直接按需加载，会导致浏览器并发发起数百个 HTTP 请求，造成严重的浏览器线程卡死和首屏白屏。esbuild 会将这些包提前物理打包合并为一个或少数几个物理 JS bundle 文件，一次请求即可拉取完毕。
 3. 动态扫描机制：Vite 会在首次启动时对项目源码进行 AST 扫描，找出所有的第三方 `import` 入口，汇总成一份预构建清单，并在后台调用 esbuild 进行打包并放入 `node_modules/.vite` 目录下缓存，极大地降低了后续运行的开销。
+
+---
+
+## 七、大厂拷打：CI/CD 性能防退化门禁与监控体系
+
+在实际的工业化开发中，前端性能优化最难的不是“提出优化方案”，而是“保证优化上线后，指标不出现反弹退化”。这需要一套完整的 CI/CD 自动化性能门禁与监控大盘。
+
+### 7.1 核心拷打真题：如何保证性能“不退化”？
+**腾讯面试官考核点：工程防退化门禁、CI/CD 自动化卡点、监控告警。**
+
+> **答题套路**：
+> 1. **构建体积防线**：在 CI 流程中，使用 `bundlesize` 或自定义 webpack/vite 插件，限制编译产物的 size 阈值，一旦 MR 导致主包体积增幅超过 5%，直接挂起流水线，拒绝合并。
+> 2. **自动化 LightHouse/Playwright 质量跑测**：在预发部署流水线中，通过 CI 调用无头浏览器（Headless Chrome）跑测页面性能，收集 LCP, CLS, INP 数据，并比对基线值，恶化则自动报警。
+> 3. **生产监控与告警大盘**：在客户端引入 APM SDK，上报真实的 RUM（Real User Monitoring）数据。按版本、机型和网络建立性能趋势看板，对性能指标下降的版本进行灰度截断。
+
+### Q17 [multiple]
+为了在 CI/CD 流程中建立“前端性能防退化门禁”，下列哪些措施是合理且可落地的？
+A. 在流水线中引入构建产物体积检查（Bundlesize），超出阈值自动中断 MR 合并
+B. 在 CI 预发部署后，调用 Puppeteer/Lighthouse 无头浏览器测试 CWV 指标，数据劣化则报警
+C. 强制要求开发者在合并代码前，手动将本地跑测的 Performance 截图上传至 Git 提交记录中
+D. 在真实用户端（RUM）集成 Web Vitals SDK 进行性能指标实时上报与版本看板监控
+答案：ABD
+解析：
+💡 它解决了什么问题：
+解决了性能优化工作往往流于“一次性攻坚”，上线后由于不断迭代，代码体积膨胀或引入慢请求，导致性能指标迅速劣化反弹的问题。
+🔍 核心原理解析：
+A、B 选项在构建期和测试期通过自动化工具建立硬性卡点；D 选项在生产期通过真实数据（RUM）进行监控，三者共同构成了闭环的防退化体系。C 选项依赖开发者纯手动操作且难以被流水线自动化审计，是不合理且难以工程化落地的方式。
+
+
+## 八、大厂中高级工程化优化方法论与真题拷打
+
+### 8.1 工业级构建性能优化主线
+在大型项目（如低代码 aPaaS 平台、复杂 SaaS 容器）中，工程化优化不只是修改打包配置，而是将构建体系进行**物理分层**：
+1. **构建卡点分流**：区分“冷启动（第一次构建/依赖重装）”与“热编译（日常业务发版）”。通过 DLL 预编译、Cache-loader 或是 Webpack 5 磁盘缓存降低 80% 的热构建耗时。
+2. **长缓存机制（Long-term Caching）**：把几乎不发生改变的三方大库与频繁变动的业务代码物理隔离，使客户端的浏览器强缓存命中率保持在 85% 以上。
+
+---
+
+### 8.2 腾讯中高级工程化面试真题拷打
+
+#### 🎤 问题 1：Babel-loader 在将 ES6 转换为 ES5 期间，如何进行 helper 函数（如 _inherits, _createClass）的复用？为什么不复用会破坏 Tree Shaking？
+**腾讯面试官考核点：Babel 转换机制、模块冗余治理、@babel/plugin-transform-runtime。**
+> **答题套路**：
+> 1. **默认转换冗余**：Babel 在转译 class 或 ES6 新语法时，默认会在每一个被转译的 JS 文件顶部内联注入一套辅助函数（Helper Functions，如 `_classCallCheck`）。如果项目有 1000 个模块，这些 Helper 函数就会被重复生成 1000 次，导致产物体积严重膨胀。
+> 2. **解决方案**：引入 `@babel/plugin-transform-runtime`。它指示 Babel 从统一的模块库 `@babel/runtime/helpers` 中通过 `require/import` 方式引入这些 Helper，从而在打包阶段合并为一份，大幅缩减最终包体积。
+> 3. **Tree Shaking 的关键陷阱**：在配置 transform-runtime 时，必须指定 `useESModules: true`（或者使用 Babel 7+ 自动支持的模式）。如果未配置，Babel 默认会使用 `require` (CommonJS) 引入 Helper。这会导致本已具备 ESM 静态特性的业务文件被悄悄污染，导致打包工具（Webpack/Rollup）退化无法对该模块及其关联依赖执行 Tree Shaking。
+
+#### 🎤 问题 2：Vite 在开发环境基于 esbuild 进行源码即时转换，而在生产环境基于 Rollup 打包。这种“开发生产双轨制”在实际工程落地中有何安全隐患？你们是如何规避的？
+**腾讯面试官考核点：环境一致性风险、esbuild 与 Rollup 的编译差异、CI/CD 自动化门禁。**
+> **答题套路**：
+> 1. **隐患分析**：esbuild（Go 编写）和 Rollup（JS 编写）对非标准 CommonJS 语法的容错度、循环依赖的处理路径，以及对高级 TS 语法的转译细节并不完全一致。极易出现“本地运行完美，线上打包报错”或者“生产构建成功但上线运行白屏”的生产事故。
+> 2. **避坑案例**：某些历史 NPM 依赖包内部同时混用了 `module.exports` 和 `export default`，在开发环境经 esbuild 预构建转换后浏览器可正常执行，但在生产环境被 Rollup 解析时，由于 Rollup 严格遵循 ESM 规范，会导致该模块导出属性为 `undefined`，引起线上运行时崩溃。
+> 3. **规避与治理手段**：
+>    *   **CI 门禁预览**：在 CI/CD 流水线中，禁止只跑 lint 和 unit test，强制运行 `npm run build && vite preview`，并在无头浏览器（Puppeteer）中执行 E2E 基础路由跑测，验证生产产物是否正常执行、无 JS 错误。
+>    *   **依赖锁版本**：对第三方包严格锁定 package-lock.json，并对非 ESM 规范的旧依赖逐步推行 AOT 转译或替换为现代替代库。
+
+#### 🎤 问题 3：Webpack 5 开启持久化文件缓存（Persistent Cache）能将二次构建耗时降至秒级。但在本地开发或 CI 中，如何防止“幽灵缓存（Stale Cache）”导致的代码不更新或打包错误？
+**腾讯面试官考核点：持久化缓存失效机制、三段 Hash 校验、构建安全策略。**
+> **答题套路**：
+> 1. **幽灵缓存起因**：Webpack 5 会将 AST、编译后的产物物理缓存在 `.cache/webpack` 磁盘目录下。如果在开发时手动改动了 node_modules 里的源码，或者修改了打包配置文件之外的隐式依赖，而没有改变 package.json/lockfile，Webpack 就会错误地命中磁盘缓存，导致编译结果未更新或产生运行时诡异 Bug。
+> 2. **三段式哈希防护（Configuring Invalidation）**：
+>    在 `cache: { type: 'filesystem' }` 中，显式指定 `buildDependencies`（构建依赖项）为当前的 `webpack.config.js`。同时，为 `version` 绑定一个基于 `lockfile` 内容 hash 和当前环境变量的动态 String。
+>    ```javascript
+>    cache: {
+>      type: 'filesystem',
+>      version: md5(fs.readFileSync('package-lock.json') + process.env.NODE_ENV),
+>      buildDependencies: {
+>        config: [__filename]
+>      }
+>    }
+>    ```
+>    这能确保只要配置文件、锁定依赖包或编译环境有任何一点改变，磁盘缓存立判失效，退回冷启动，杜绝“幽灵缓存”。
+> 3. **CI 流程策略**：在 CI/CD 构建机中，对非 Release 分支复用持久缓存加速构建；但在最终的 Release 生产打包流水线中，强制配置不使用持久化缓存（进行干净的冷启动），绝对防范缓存漏洞逃逸到生产。
+
+#### 🎤 问题 4：为什么说 pnpm 从根本上解决了 npm/yarn 扁平化依赖布局带来的“幽灵依赖（Ghost Dependency）”风险？它底层的软链是如何组织的？
+**腾讯面试官考核点：包管理器原理、幽灵依赖危害、内容寻址存储（CAS）与符号链接。**
+> **答题套路**：
+> 1. **幽灵依赖的危害**：npm/yarn v1 通过“扁平化提升”把所有依赖的子依赖都平铺在根目录 `node_modules` 下。这允许开发者在代码里直接 `require('foo')`，即使 package.json 中根本没有声明 `foo`。一旦上游依赖升级并删除了对 `foo` 的引用，项目在下一次 install 后便会直接崩溃。
+> 2. **pnpm 的内容寻址存储（CAS）**：pnpm 在全局（`~/.pnpm-store`）只下载和存储每一份依赖包的物理文件，相同版本的包在磁盘上仅占有一份物理空间。
+> 3. **双重链接隔离方案**：
+>    *   **硬链接（Hard Link）**：pnpm 将全局 store 中的物理文件“硬链接”到项目 `node_modules/.pnpm/` 对应的包目录下。
+>    *   **软链接（Symbolic Link）**：在项目的根 `node_modules` 下，**只创建**在 package.json 中明确声明的依赖的软链接，将其指向 `.pnpm/` 中对应的硬链接包。这样，未被显式声明的子依赖对主项目而言是“物理不可见”的，从根本上杜绝了幽灵依赖的非法引入。
+

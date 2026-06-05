@@ -332,13 +332,60 @@ function App() {
     }
 
     setCurrentModuleId(moduleId);
-    setQuizState(createQuizState(type, moduleId, docIdx, questions));
+
+    // 尝试从 localStorage 恢复 quizState
+    const savedStateStr = localStorage.getItem('active_quiz_state');
+    let restored = false;
+    if (savedStateStr) {
+      try {
+        const savedState = JSON.parse(savedStateStr);
+        const typeMatch = savedState.type === type;
+        const moduleMatch = savedState.moduleId === moduleId;
+        const docIdxMatch = savedState.docIdx == docIdx; // 兼容 null 与 undefined，或数字与字符串的松散比较
+
+        if (typeMatch && moduleMatch && docIdxMatch && savedState.questions && savedState.questions.length === questions.length) {
+          setQuizState(savedState);
+          restored = true;
+        }
+      } catch (e) {
+        console.error('解析本地保存的刷题状态失败', e);
+      }
+    }
+
+    if (!restored) {
+      setQuizState(createQuizState(type, moduleId, docIdx, questions));
+    }
+
     setAnswerCardCollapsed(false);
     setMobileAnswerCardOpen(false);
   }, [db, drillStatCache, location.pathname, location.search, navigate, page, quizState, wrongBookCache]);
 
+  // 监听 quizState 变化，自动持久化到 localStorage 中，或者在离开刷题/结果页时清除
+  useEffect(() => {
+    if (quizState) {
+      localStorage.setItem('active_quiz_state', JSON.stringify(quizState));
+    } else {
+      const parts = location.pathname.split('/').filter(Boolean);
+      if (parts[0] !== 'quiz' && parts[0] !== 'result') {
+        localStorage.removeItem('active_quiz_state');
+      }
+    }
+  }, [quizState, location.pathname]);
+
   useEffect(() => {
     if (page === 'result' && !quizState) {
+      const savedStateStr = localStorage.getItem('active_quiz_state');
+      if (savedStateStr) {
+        try {
+          const savedState = JSON.parse(savedStateStr);
+          if (savedState && savedState.questions) {
+            setQuizState(savedState);
+            return;
+          }
+        } catch (e) {
+          console.error('解析结果页本地状态失败', e);
+        }
+      }
       navigate('/', { replace: true });
     }
   }, [navigate, page, quizState]);

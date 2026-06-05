@@ -19,10 +19,11 @@ export function SyncModal({ isOpen, onClose, db, user, onSyncComplete, onAuthCha
     setLoading(true);
     setMessage('');
     try {
+      const redirectToUrl = window.location.origin + import.meta.env.BASE_URL;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin + window.location.pathname
+          emailRedirectTo: redirectToUrl
         }
       });
       if (error) throw error;

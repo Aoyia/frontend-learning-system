@@ -142,7 +142,7 @@ export function createQuizState(type, moduleId, docIdx, questions) {
     moduleId,
     docIdx,
     questions,
-    pageSize: 5,
+    pageSize: 1,
     currentPageIdx: 0,
     selections: {},
     answers: {},

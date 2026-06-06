@@ -80,7 +80,7 @@ export function TechBreakerMap({ onOpenCard }) {
   }
 
   function startPan(e) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 && e.pointerType !== 'touch') return;
     e.currentTarget.setPointerCapture(e.pointerId);
     dragRef.current = {
       type: 'pan',
@@ -93,7 +93,7 @@ export function TechBreakerMap({ onOpenCard }) {
   }
 
   function startNodeDrag(e, node) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 && e.pointerType !== 'touch') return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     dragRef.current = {
@@ -156,11 +156,53 @@ export function TechBreakerMap({ onOpenCard }) {
     requestAnimationFrame(() => fitView(originalNodes));
   }
 
+  function zoomIn() {
+    setView(prev => {
+      const nextScale = Math.min(1.6, prev.scale * 1.25);
+      const container = viewportRef.current;
+      if (!container) return { ...prev, scale: nextScale };
+      const rect = container.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const worldX = (centerX - prev.x) / prev.scale;
+      const worldY = (centerY - prev.y) / prev.scale;
+      const nextView = {
+        scale: nextScale,
+        x: centerX - worldX * nextScale,
+        y: centerY - worldY * nextScale,
+      };
+      persistLayout(nodes, nextView);
+      return nextView;
+    });
+  }
+
+  function zoomOut() {
+    setView(prev => {
+      const nextScale = Math.max(0.18, prev.scale * 0.8);
+      const container = viewportRef.current;
+      if (!container) return { ...prev, scale: nextScale };
+      const rect = container.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const worldX = (centerX - prev.x) / prev.scale;
+      const worldY = (centerY - prev.y) / prev.scale;
+      const nextView = {
+        scale: nextScale,
+        x: centerX - worldX * nextScale,
+        y: centerY - worldY * nextScale,
+      };
+      persistLayout(nodes, nextView);
+      return nextView;
+    });
+  }
+
   return (
     <div data-component="tech-breaker-map" className="h-full min-h-0 flex flex-col relative">
       <div className="absolute top-3.5 left-3.5 right-3.5 z-5 flex items-center justify-between gap-3 pointer-events-none">
         <div className="px-3 py-2 border border-border rounded-lg bg-surface/86 text-text text-[14px] font-bold shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md pointer-events-auto">技术破冰</div>
         <div className="flex gap-2 pointer-events-auto">
+          <button className="border border-border rounded-lg bg-surface/86 text-text-secondary px-2.75 py-2 cursor-pointer text-[12px] font-bold backdrop-blur-md transition-all duration-180 shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:border-primary hover:text-primary" onClick={zoomIn} title="放大">＋</button>
+          <button className="border border-border rounded-lg bg-surface/86 text-text-secondary px-2.75 py-2 cursor-pointer text-[12px] font-bold backdrop-blur-md transition-all duration-180 shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:border-primary hover:text-primary" onClick={zoomOut} title="缩小">－</button>
           <button className="border border-border rounded-lg bg-surface/86 text-text-secondary px-2.75 py-2 cursor-pointer text-[12px] font-bold backdrop-blur-md transition-all duration-180 shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:border-primary hover:text-primary" onClick={() => fitView(nodes)} title="适配视图">适配</button>
           <button className="border border-border rounded-lg bg-surface/86 text-text-secondary px-2.75 py-2 cursor-pointer text-[12px] font-bold backdrop-blur-md transition-all duration-180 shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:border-primary hover:text-primary" onClick={resetLayout} title="重置布局">重置</button>
         </div>

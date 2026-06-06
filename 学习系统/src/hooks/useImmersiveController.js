@@ -30,7 +30,11 @@ export function useImmersiveController(page) {
   }, [immersiveMode]);
 
   useEffect(() => {
-    if (page !== 'learn') setImmersiveMode(false);
+    if (page === 'quiz') {
+      setImmersiveMode(true);
+    } else if (page !== 'learn') {
+      setImmersiveMode(false);
+    }
   }, [page]);
 
   return { immersiveMode, setImmersiveMode, toolbarVisible };

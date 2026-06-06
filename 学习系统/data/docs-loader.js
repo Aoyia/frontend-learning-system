@@ -161,7 +161,7 @@ function parseDocsQuiz(markdown) {
     const questionAndOptions = lines.filter(l => !l.startsWith('答案：'));
 
     if (type === 'judgment') {
-      const question = questionAndOptions.find(l => !l.startsWith('答案：') && !l.startsWith('解析：'));
+      const question = questionAndOptions.join('\n');
       if (!question) return null;
       return {
         type: 'judgment',
@@ -172,16 +172,20 @@ function parseDocsQuiz(markdown) {
       };
     }
 
-    const question = questionAndOptions.find(
-      l => !/^[A-F]\./.test(l) && !l.startsWith('答案：') && !l.startsWith('解析：')
-    );
+    const firstOptionIdx = questionAndOptions.findIndex(l => /^[A-F]\./.test(l));
+    if (firstOptionIdx === -1) return null;
+
+    const questionLines = questionAndOptions.slice(0, firstOptionIdx);
+    const optionLines = questionAndOptions.slice(firstOptionIdx);
+
+    const question = questionLines.join('\n');
     const options = [];
     let currentOption = null;
-    questionAndOptions.forEach(line => {
+    optionLines.forEach(line => {
       if (/^[A-F]\./.test(line)) {
         if (currentOption) options.push(currentOption);
         currentOption = line.replace(/^[A-F]\.\s*/, '');
-      } else if (currentOption && line !== question) {
+      } else if (currentOption) {
         currentOption += `\n${line}`;
       }
     });

@@ -11,7 +11,11 @@ export function QuestionBlock({ question, globalIdx, isSubmitted, selected, answ
         <span>第 {globalIdx + 1} 题</span>
         <span className={`question-type-badge ${question.type}`}>{typeLabel}</span>
       </div>
-      <div data-element="question-stem" className="text-[16px] font-medium leading-relaxed mb-5 text-text-strong">{question.question}</div>
+      <div 
+        data-element="question-stem" 
+        className="text-[16px] font-medium leading-relaxed mb-5 text-text-strong md-body quiz-question-text"
+        dangerouslySetInnerHTML={{ __html: marked.parse(question.question || '') }}
+      />
       <div data-element="options" className="flex flex-col gap-2.5">
         {question.options.map((opt, i) => {
           const keyLabel = question.type === 'judgment' ? (i === 0 ? '✓' : '✗') : 'ABCDEF'[i];

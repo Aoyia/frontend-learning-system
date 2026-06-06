@@ -24,6 +24,13 @@ export function WrongBookPage({ wrongBookCache, onStartWrongBook, onReadChapter 
     );
   }
 
+  const getQuestionSummary = (text) => {
+    if (!text) return '';
+    const firstLine = text.split('\n')[0].trim();
+    const cleanLine = firstLine.replace(/`/g, '');
+    return text.includes('\n') ? `${cleanLine} ...` : cleanLine;
+  };
+
   return (
     <div data-component="wrong-book-page" className="max-w-[700px] mx-auto">
       <h2 className="text-[22px] font-bold mb-1.5 text-text-strong">🧩 错题本</h2>
@@ -46,7 +53,7 @@ export function WrongBookPage({ wrongBookCache, onStartWrongBook, onReadChapter 
         {records.slice(0, 12).map(record => (
           <div className="flex items-start md:items-center justify-between gap-3.5 p-3.5 px-4 bg-surface border border-border rounded-xl flex-col md:flex-row w-full" key={record.qid}>
             <div>
-              <div className="text-[14px] leading-normal text-text mb-1 font-medium">{record.question}</div>
+              <div className="text-[14px] leading-normal text-text mb-1 font-medium">{getQuestionSummary(record.question)}</div>
               <div className="text-[12px] text-text-secondary">
                 {record.moduleName} / {record.docTitle} · 错 {record.wrongCount || 1} 次
               </div>

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
 ALTER TABLE public.user_progress ENABLE ROW LEVEL SECURITY;
 
 -- 创建 RLS 策略：仅允许经过身份验证的用户管理属于自己的数据
+DROP POLICY IF EXISTS "Allow individual read/write access to user_progress" ON public.user_progress;
 CREATE POLICY "Allow individual read/write access to user_progress" ON public.user_progress
   FOR ALL
   USING (auth.uid() = user_id)
@@ -38,10 +39,26 @@ CREATE TABLE IF NOT EXISTS public.quiz_records (
 ALTER TABLE public.quiz_records ENABLE ROW LEVEL SECURITY;
 
 -- 创建 RLS 策略
+DROP POLICY IF EXISTS "Allow individual read/write access to quiz_records" ON public.quiz_records;
 CREATE POLICY "Allow individual read/write access to quiz_records" ON public.quiz_records
   FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- [修复3] 为 quiz_records 添加 (user_id, time) 联合唯一约束，支持 upsert onConflict 防重
+-- 幂等写法：如约束已存在则跳过
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'quiz_records_user_id_time_unique'
+      AND conrelid = 'public.quiz_records'::regclass
+  ) THEN
+    ALTER TABLE public.quiz_records
+      ADD CONSTRAINT quiz_records_user_id_time_unique UNIQUE (user_id, time);
+  END IF;
+END$$;
+
 
 
 -- 3. 刷题数据统计表 (drill_stats)
@@ -60,6 +77,7 @@ CREATE TABLE IF NOT EXISTS public.drill_stats (
 ALTER TABLE public.drill_stats ENABLE ROW LEVEL SECURITY;
 
 -- 创建 RLS 策略
+DROP POLICY IF EXISTS "Allow individual read/write access to drill_stats" ON public.drill_stats;
 CREATE POLICY "Allow individual read/write access to drill_stats" ON public.drill_stats
   FOR ALL
   USING (auth.uid() = user_id)
@@ -79,6 +97,7 @@ CREATE TABLE IF NOT EXISTS public.wrong_book (
 ALTER TABLE public.wrong_book ENABLE ROW LEVEL SECURITY;
 
 -- 创建 RLS 策略
+DROP POLICY IF EXISTS "Allow individual read/write access to wrong_book" ON public.wrong_book;
 CREATE POLICY "Allow individual read/write access to wrong_book" ON public.wrong_book
   FOR ALL
   USING (auth.uid() = user_id)
@@ -98,6 +117,7 @@ CREATE TABLE IF NOT EXISTS public.pet_state (
 ALTER TABLE public.pet_state ENABLE ROW LEVEL SECURITY;
 
 -- 创建 RLS 策略
+DROP POLICY IF EXISTS "Allow individual read/write access to pet_state" ON public.pet_state;
 CREATE POLICY "Allow individual read/write access to pet_state" ON public.pet_state
   FOR ALL
   USING (auth.uid() = user_id)
@@ -117,7 +137,25 @@ CREATE TABLE IF NOT EXISTS public.pet_events (
 ALTER TABLE public.pet_events ENABLE ROW LEVEL SECURITY;
 
 -- 创建 RLS 策略
+DROP POLICY IF EXISTS "Allow individual read/write access to pet_events" ON public.pet_events;
 CREATE POLICY "Allow individual read/write access to pet_events" ON public.pet_events
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+
+-- 7. 用户同步状态控制表 (user_sync_status)
+CREATE TABLE IF NOT EXISTS public.user_sync_status (
+  user_id uuid NOT NULL DEFAULT auth.uid() PRIMARY KEY,
+  last_updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
+);
+
+-- 开启行级安全策略 (RLS)
+ALTER TABLE public.user_sync_status ENABLE ROW LEVEL SECURITY;
+
+-- 创建 RLS 策略
+DROP POLICY IF EXISTS "Allow individual read/write access to user_sync_status" ON public.user_sync_status;
+CREATE POLICY "Allow individual read/write access to user_sync_status" ON public.user_sync_status
   FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);

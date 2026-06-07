@@ -150,15 +150,16 @@ function parseDocsQuiz(markdown) {
       .replace('多选', 'multiple')
       .replace('判断', 'judgment');
 
-    const explainIdx = block.indexOf('解析：');
+    const explainMatch = block.match(/解析[：:]/);
+    const explainIdx = explainMatch ? explainMatch.index : -1;
     const hasExplain = explainIdx !== -1;
     const blockBeforeExplain = hasExplain ? block.slice(0, explainIdx) : block;
-    const explain = hasExplain ? block.slice(explainIdx + 3).trim() : '';
+    const explain = hasExplain ? block.slice(explainIdx + explainMatch[0].length).trim() : '';
 
     const lines = blockBeforeExplain.split('\n').map(l => l.trim()).filter(Boolean);
-    const answerLine = lines.find(l => l.startsWith('答案：'));
-    const answerStr = answerLine?.replace('答案：', '').trim() || '';
-    const questionAndOptions = lines.filter(l => !l.startsWith('答案：'));
+    const answerLine = lines.find(l => /^答案[：:]/.test(l));
+    const answerStr = answerLine?.replace(/^答案[：:]/, '').trim() || '';
+    const questionAndOptions = lines.filter(l => !/^答案[：:]/.test(l));
 
     if (type === 'judgment') {
       const question = questionAndOptions.join('\n');

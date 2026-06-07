@@ -152,6 +152,7 @@ function App() {
 
       const timeStr = new Date().toLocaleString();
       localStorage.setItem('last_sync_time', timeStr);
+      localStorage.setItem('last_sync_timestamp', Date.now().toString());
 
       await reloadLocalCaches();
       showToast(`🎉 自动同步成功！上传了 ${result.uploadCount} 条，拉取了 ${result.downloadCount} 条记录。`);
@@ -181,7 +182,7 @@ function App() {
       const currentUser = userRef.current;
 
       if (currentUser) {
-        // 已登录用户：自动在后台静默同步
+        // 已登录用户：自动在后台静默同步（内部已实现脏标记与云端全局状态的快速按需判定）
         window.removeEventListener('mousedown', handleFirstActivity);
         window.removeEventListener('keydown', handleFirstActivity);
         window.removeEventListener('touchstart', handleFirstActivity);
@@ -715,7 +716,14 @@ function App() {
   }
 
   function nextPage() {
-    setQuizState(prev => ({ ...prev, currentPageIdx: prev.currentPageIdx + 1 }));
+    setQuizState(prev => {
+      const nextPageIdx = prev.currentPageIdx + 1;
+      return {
+        ...prev,
+        currentPageIdx: nextPageIdx,
+        activeQuestionIdx: nextPageIdx * prev.pageSize
+      };
+    });
     document.querySelector('.content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -742,10 +750,17 @@ function App() {
     flushSync(() => {
       setQuizState(prev => {
         const targetPage = Math.floor(globalIdx / prev.pageSize);
-        return { ...prev, currentPageIdx: targetPage };
+        return { 
+          ...prev, 
+          currentPageIdx: targetPage,
+          activeQuestionIdx: globalIdx
+        };
       });
     });
-    document.getElementById(`qq-${globalIdx}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const el = document.getElementById(`qq-${globalIdx}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   const activeNavPage = page === 'quiz' || page === 'result'
@@ -756,11 +771,24 @@ function App() {
     <>
       {toast && <div className="toast">{toast}</div>}
       {immersiveMode && (
-        <div data-component="immersive-toolbar" className={`fixed top-4 right-5 z-[999] flex items-center gap-2.5 bg-surface border border-border rounded-[24px] px-4 py-1.75 shadow-[0_4px_24px_rgba(0,0,0,0.3)] text-[13px] text-text-secondary transition-all duration-400 ease-in-out ${toolbarVisible ? 'opacity-1 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
-          <span>{page === 'quiz' ? '专注做题' : '专注阅读'}</span>
-          <div className="w-[1px] h-3.5 bg-border" />
-          <button className="flex items-center gap-1.5 bg-transparent border-0 cursor-pointer text-text text-[13px] font-semibold p-0 hover:text-primary" onClick={() => setImmersiveMode(false)}>
-            退出 <kbd className="text-[11px] bg-surface-alt border border-border rounded px-1.25 py-0.25 font-sans">Esc</kbd>
+        <div data-component="immersive-toolbar" className={`fixed top-4 right-5 z-[999] transition-all duration-400 ease-in-out ${toolbarVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+          <button 
+            className="bg-transparent border-0 p-0 cursor-pointer text-text-secondary hover:text-primary select-none opacity-40 hover:opacity-100 transition-all duration-150 active:scale-[0.9] flex items-center justify-center gap-1.5" 
+            onClick={() => setImmersiveMode(false)}
+            title="退出专注模式 (Esc)"
+          >
+            <svg 
+              className="w-3.5 h-3.5" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2.2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M8 3v5H3M21 8h-5V3M3 16h5v5M16 21v-5h5" />
+            </svg>
+            <kbd className="text-[9px] bg-transparent border border-border/30 rounded px-1 py-0.25 font-sans text-text-secondary opacity-70 font-medium scale-90">Esc</kbd>
           </button>
         </div>
       )}
@@ -913,6 +941,9 @@ function App() {
               onNextPage={nextPage}
               onShowResult={showQuizResult}
               onReadChapter={navToDoc}
+              immersiveMode={immersiveMode}
+              onToggleImmersive={() => setImmersiveMode(v => !v)}
+              onJumpToQuestion={jumpToQuestion}
             />
           )}
           {page === 'result' && quizState && (

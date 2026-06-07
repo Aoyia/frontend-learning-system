@@ -135,9 +135,29 @@ async function getLocalData(db) {
 }
 
 /**
- * 拉取云端 Supabase 当前用户的全部数据
+ * 拉取云端 Supabase 当前用户的增量数据
+ * @param {string} userId 用户ID
+ * @param {number} lastCloudSyncTime 上一次同步的时间戳
  */
-async function getCloudData(userId) {
+async function getCloudData(userId, lastCloudSyncTime = 0) {
+  const lastCloudSyncISO = lastCloudSyncTime > 0 ? new Date(lastCloudSyncTime).toISOString() : null;
+
+  const progressQuery = supabase.from('user_progress').select('*').eq('user_id', userId);
+  const drillQuery = supabase.from('drill_stats').select('*').eq('user_id', userId);
+  const wrongQuery = supabase.from('wrong_book').select('*').eq('user_id', userId);
+  const petStateQuery = supabase.from('pet_state').select('*').eq('user_id', userId);
+  const petEventsQuery = supabase.from('pet_events').select('*').eq('user_id', userId);
+  const quizQuery = supabase.from('quiz_records').select('*').eq('user_id', userId);
+
+  if (lastCloudSyncISO) {
+    progressQuery.gt('updated_at', lastCloudSyncISO);
+    drillQuery.gt('updated_at', lastCloudSyncISO);
+    wrongQuery.gt('updated_at', lastCloudSyncISO);
+    petStateQuery.gt('updated_at', lastCloudSyncISO);
+    petEventsQuery.gt('updated_at', lastCloudSyncISO);
+    quizQuery.gt('time', lastCloudSyncTime);
+  }
+
   const [
     rProgress,
     rDrillStat,
@@ -146,12 +166,12 @@ async function getCloudData(userId) {
     rPetEvents,
     rQuizRecord
   ] = await Promise.all([
-    supabase.from('user_progress').select('*').eq('user_id', userId),
-    supabase.from('drill_stats').select('*').eq('user_id', userId),
-    supabase.from('wrong_book').select('*').eq('user_id', userId),
-    supabase.from('pet_state').select('*').eq('user_id', userId),
-    supabase.from('pet_events').select('*').eq('user_id', userId),
-    supabase.from('quiz_records').select('*').eq('user_id', userId),
+    progressQuery,
+    drillQuery,
+    wrongQuery,
+    petStateQuery,
+    petEventsQuery,
+    quizQuery
   ]);
 
   // 错误检查
@@ -172,7 +192,7 @@ async function getCloudData(userId) {
 }
 
 /**
- * 双向手动同步主函数
+ * 双向手动/自动同步主函数（按需与增量优化版）
  * @param {IDBDatabase} db 本地 IndexedDB 实例
  * @param {string} userId 当前登录的 Supabase 用户 UUID
  */
@@ -181,11 +201,75 @@ export async function syncLocalAndCloud(db, userId) {
     throw new Error('Supabase 未初始化或用户未登录');
   }
 
-  console.log('--- 开始进行云端与本地同步 ---');
+  // [修复2] 使用 Web Locks API 实现跨标签页互斥锁，防止多实例并发同步
+  if (typeof navigator !== 'undefined' && navigator.locks) {
+    return await navigator.locks.request('sync_local_and_cloud_lock', async () => {
+      return await _executeSync(db, userId);
+    });
+  }
+
+  // 降级：不支持 Web Locks 的旧浏览器直接执行
+  return await _executeSync(db, userId);
+}
+
+/**
+ * 同步核心执行函数（在互斥锁保护下运行）
+ */
+async function _executeSync(db, userId) {
+  // 读取上次成功的云同步对齐时间戳及本地脏标记
+  const lastCloudSyncTime = Number(localStorage.getItem('last_cloud_sync_time') || '0');
+  const localDbDirty = localStorage.getItem('local_db_dirty') === 'true';
+
+  // [修复1] 记录同步开始时刻的写入时间戳快照，用于同步结束时的条件清除
+  const syncStartWriteTime = Number(localStorage.getItem('local_db_write_time') || '0');
+
+  console.log('--- 开始进行云端与本地按需同步 ---');
+
+  let needDownload = true; // 是否需要从云端下载增量
+  let needUpload = localDbDirty; // 本地是否需要上传
+
+  // 尝试通过全局单行状态表进行快速判定，过滤不需要同步的场景
+  try {
+    const { data: syncStatus, error: syncStatusErr } = await supabase
+      .from('user_sync_status')
+      .select('last_updated_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (syncStatusErr) {
+      throw syncStatusErr;
+    }
+
+    if (syncStatus) {
+      const cloudTime = new Date(syncStatus.last_updated_at).getTime();
+      // 如果云端的最新更新时间落后于或等于本地上一次同步时间，说明云端自上次对齐以来无任何改动
+      if (cloudTime <= lastCloudSyncTime) {
+        needDownload = false;
+      }
+    } else {
+      // 云端尚无此用户的同步状态记录，说明云端数据为空，无须下载
+      needDownload = false;
+    }
+  } catch (err) {
+    // 降级处理：如表不存在，打印警告，退化为普通增量检查（直接查询 6 张表过滤）
+    console.warn('获取全局同步状态失败（可能未创建 user_sync_status 表，将退化为常规增量同步）。错误信息:', err.message);
+  }
+
+  // 快速通道：云端没有新更新，且本地没有产生过新成果，立即退出！
+  if (!needDownload && !needUpload) {
+    console.log('--- [快速通道] 本地无改动，云端无更新，跳过同步 ---');
+    const timeStr = new Date().toLocaleString();
+    localStorage.setItem('last_sync_time', timeStr);
+    localStorage.setItem('last_sync_timestamp', Date.now().toString());
+    return { uploadCount: 0, downloadCount: 0 };
+  }
 
   // 1. 获取本地和云端数据
   const local = await getLocalData(db);
-  const cloud = await getCloudData(userId);
+  // 如果 needDownload 为 false，我们可以直接返回空数组，免去向 Supabase 发起 6 张表拉取的开销
+  const cloud = needDownload
+    ? await getCloudData(userId, lastCloudSyncTime)
+    : { progress: [], drillStat: [], wrongBook: [], petState: [], petEvents: [], quizRecord: [] };
 
   const toUpload = {
     progress: [],
@@ -205,13 +289,13 @@ export async function syncLocalAndCloud(db, userId) {
     quizRecord: []
   };
 
-  // 2. 双向比对：针对有更新时间戳的五个表 (通过主键比对)
+  // 2. 双向比对：针对有更新时间戳的五个表
   const syncableStores = [
-    { store: 'progress', pk: 'id', cloudTable: 'user_progress' },
-    { store: 'drillStat', pk: 'qid', cloudTable: 'drill_stats' },
-    { store: 'wrongBook', pk: 'qid', cloudTable: 'wrong_book' },
-    { store: 'petState', pk: 'id', cloudTable: 'pet_state' },
-    { store: 'petEvents', pk: 'id', cloudTable: 'pet_events' }
+    { store: 'progress', pk: 'id' },
+    { store: 'drillStat', pk: 'qid' },
+    { store: 'wrongBook', pk: 'qid' },
+    { store: 'petState', pk: 'id' },
+    { store: 'petEvents', pk: 'id' }
   ];
 
   for (const { store, pk } of syncableStores) {
@@ -226,8 +310,11 @@ export async function syncLocalAndCloud(db, userId) {
       const cloudItem = cloudMap.get(key);
 
       if (localItem && !cloudItem) {
-        // 本地有，云端无 -> 上传
-        toUpload[store].push(localToCloud(store, localItem, userId));
+        // 本地有，云端无。在增量查询模式下，云端只返回最近更改过的记录
+        // 因此如果云端没返回且本地该数据是在上次对齐之后新改动的，才需要上传
+        if (localItem.updatedAt > lastCloudSyncTime) {
+          toUpload[store].push(localToCloud(store, localItem, userId));
+        }
       } else if (!localItem && cloudItem) {
         // 云端有，本地无 -> 下载
         toDownload[store].push(cloudToLocal(store, cloudItem));
@@ -237,42 +324,43 @@ export async function syncLocalAndCloud(db, userId) {
         const cloudTime = cloudItem.updated_at ? new Date(cloudItem.updated_at).getTime() : 0;
 
         if (localTime > cloudTime) {
-          // 本地较新 -> 上传
           toUpload[store].push(localToCloud(store, localItem, userId));
         } else if (cloudTime > localTime) {
-          // 云端较新 -> 下载
           toDownload[store].push(cloudToLocal(store, cloudItem));
         }
       }
     }
   }
 
-  // 3. 针对 quizRecord 表 (答题历史只增不改，通过 time 字段查重合并)
+  // 3. 针对 quizRecord 表 (通过时间戳增量判定)
   const localQuizTimes = new Set(local.quizRecord.map(item => Number(item.time)));
   const cloudQuizTimes = new Set(cloud.quizRecord.map(item => Number(item.time)));
 
-  // 本地有但云端没有的记录 -> 上传
+  // 本地在上次对齐后产生的新记录 -> 上传
   for (const item of local.quizRecord) {
-    if (!cloudQuizTimes.has(Number(item.time))) {
+    if (Number(item.time) > lastCloudSyncTime && !cloudQuizTimes.has(Number(item.time))) {
       toUpload.quizRecord.push(localToCloud('quizRecord', item, userId));
     }
   }
-  // 云端有但本地没有的记录 -> 下载
+  // 云端新记录 -> 下载（按 time 去重，防止云端重复行污染本地）
+  const seenQuizTimes = new Set(localQuizTimes);
   for (const item of cloud.quizRecord) {
-    if (!localQuizTimes.has(Number(item.time))) {
+    const t = Number(item.time);
+    if (!seenQuizTimes.has(t)) {
+      seenQuizTimes.add(t);
       toDownload.quizRecord.push(cloudToLocal('quizRecord', item));
     }
   }
 
   // 4. 执行写入
-  // 4.1 下载并写入本地 IndexedDB
+  // 4.1 下载并写入本地 IndexedDB（传入 isSync = true，防止触发 local_db_dirty）
   let downloadCount = 0;
   for (const store of ['progress', 'drillStat', 'wrongBook', 'petState', 'petEvents', 'quizRecord']) {
     const list = toDownload[store];
     if (list.length > 0) {
       downloadCount += list.length;
       for (const item of list) {
-        await dbPut(db, store, item);
+        await dbPut(db, store, item, true);
       }
     }
   }
@@ -293,10 +381,9 @@ export async function syncLocalAndCloud(db, userId) {
       };
       const tableName = tableMap[store];
 
-      // 批量 upsert，quiz_records 因为没有联合主键但以 time 为准，但在 supabase 里面是自增 PK，
-      // 所以 quiz_records 在 Supabase 侧只做单向 INSERT，或者由我们在建表时增加 time 与 user_id 的联合唯一约束
       if (store === 'quizRecord') {
-        const { error } = await supabase.from(tableName).insert(list);
+        // [修复3] 使用 upsert + onConflict 防止重复 Insert（数据库侧需配合 (user_id, time) 联合唯一约束）
+        const { error } = await supabase.from(tableName).upsert(list, { onConflict: 'user_id,time' });
         if (error) {
           console.error(`上传 ${store} 失败:`, error);
           throw new Error(`同步上传失败: ${error.message}`);
@@ -311,6 +398,37 @@ export async function syncLocalAndCloud(db, userId) {
     }
   }
 
+  // 4.3 写入成功后，若有本地改动上传，则更新云端的全局更新版本戳
+  // [修复4] user_sync_status 更新失败时抛出异常，防止 last_cloud_sync_time 错误推进
+  if (uploadCount > 0) {
+    const syncStatusData = {
+      user_id: userId,
+      last_updated_at: new Date().toISOString()
+    };
+    const { error: statusErr } = await supabase.from('user_sync_status').upsert(syncStatusData);
+    if (statusErr) {
+      console.error('更新云端全局同步状态表失败，回滚本次同步状态:', statusErr.message);
+      throw new Error(`同步状态更新失败: ${statusErr.message}`);
+    }
+  }
+
+  // 5. 更新本地同步状态和最后对齐时间戳
+  const nowTimestamp = Date.now();
+  localStorage.setItem('last_cloud_sync_time', nowTimestamp.toString());
+  localStorage.setItem('last_sync_timestamp', nowTimestamp.toString());
+  localStorage.setItem('last_sync_time', new Date(nowTimestamp).toLocaleString());
+
+  // [修复1] 条件性清除脏标记：只有在同步期间没有产生新的写入，才将脏标记清除
+  // 如果 syncStartWriteTime < 当前 local_db_write_time，说明同步期间有新写入，保留脏标记
+  const currentWriteTime = Number(localStorage.getItem('local_db_write_time') || '0');
+  if (currentWriteTime <= syncStartWriteTime) {
+    localStorage.setItem('local_db_dirty', 'false');
+  } else {
+    console.log('[同步] 检测到同步期间有新数据写入，保留脏标记，等待下次同步上传。');
+  }
+
   console.log(`--- 同步完成！共上传 ${uploadCount} 条记录，下载 ${downloadCount} 条记录 ---`);
   return { uploadCount, downloadCount };
 }
+
+

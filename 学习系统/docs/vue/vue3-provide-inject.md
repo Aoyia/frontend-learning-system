@@ -749,7 +749,7 @@ B. window.__VUE_PROVIDES__
 C. 每个组件的 props
 D. Pinia store
 答案：A
-解析:
+解析：
 💡 它解决了什么问题：
 如果不设计一个应用级的应用上下文 `appContext.provides`，而是让每个 app 实例的全局 provide 都在每个组件创建时强行塞入组件实例中，不仅会导致根组件创建前的 provides 分配无序，还会让多个并存 of app 实例（例如在微前端或 SSR 场景下）的全局注入发生命名空间冲突和内存泄露。
 

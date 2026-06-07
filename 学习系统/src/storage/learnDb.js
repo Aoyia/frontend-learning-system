@@ -27,11 +27,16 @@ export function dbGetAll(db, store) {
   });
 }
 
-export function dbPut(db, store, value) {
+export function dbPut(db, store, value, isSync = false) {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     if (!value.updatedAt) {
       value.updatedAt = Date.now();
     }
+  }
+  if (!isSync) {
+    const now = Date.now().toString();
+    localStorage.setItem('local_db_dirty', 'true');
+    localStorage.setItem('local_db_write_time', now);
   }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, 'readwrite');
@@ -42,6 +47,7 @@ export function dbPut(db, store, value) {
 }
 
 export function dbDelete(db, store, key) {
+  localStorage.setItem('local_db_dirty', 'true');
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, 'readwrite');
     const req = tx.objectStore(store).delete(key);

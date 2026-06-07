@@ -65,6 +65,7 @@ export function SyncModal({ isOpen, onClose, db, user, onSyncComplete, onAuthCha
       
       const timeStr = new Date().toLocaleString();
       localStorage.setItem('last_sync_time', timeStr);
+      localStorage.setItem('last_sync_timestamp', Date.now().toString());
       setLastSyncTime(timeStr);
       
       setMessage(`🎉 同步成功！上传了 ${result.uploadCount} 条，拉取了 ${result.downloadCount} 条记录。`);

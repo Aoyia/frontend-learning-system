@@ -13,3 +13,8 @@ dist/
 .env.test.local
 .env.production.local
 学习系统/.env.local
+
+# Agent tools
+.agents/
+skills-lock.json
+

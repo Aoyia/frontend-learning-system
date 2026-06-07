@@ -1,0 +1,3 @@
+packages:
+  - '学习系统'
+  - 'packages/*'

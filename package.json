@@ -1,0 +1,11 @@
+{
+  "name": "frontend-learning-system",
+  "private": true,
+  "version": "1.0.0",
+  "description": "前端学习体系 — Monorepo 工作区",
+  "scripts": {
+    "dev": "pnpm -C 学习系统 dev",
+    "build": "pnpm -C 学习系统 build",
+    "build:ui": "pnpm -C packages/yuan-ui build"
+  }
+}

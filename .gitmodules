@@ -1,0 +1,3 @@
+[submodule "packages/yuan-ui"]
+	path = packages/yuan-ui
+	url = https://github.com/Aoyia/yuan-ui.git

@@ -1422,3 +1422,179 @@ html[data-immersive="true"] aside[data-component="sidebar"] {
   }
 }
 
+/* ==========================================================================
+   Mermaid 流程图全屏预览增强样式
+   ========================================================================== */
+
+/* 1. 原生文档中的 Mermaid 容器增强 */
+.mermaid {
+  position: relative;
+  cursor: zoom-in;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 8px;
+}
+.mermaid:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 悬浮全屏预览激活按钮 */
+.mermaid-zoom-trigger {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #a0aec0;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+.mermaid:hover .mermaid-zoom-trigger {
+  opacity: 1;
+  transform: scale(1);
+}
+.mermaid-zoom-trigger:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* 2. 全屏预览弹窗 Modal 遮罩层 */
+.mermaid-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999;
+  background-color: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mermaid-preview-modal.show {
+  opacity: 1;
+}
+
+/* 视口容器 */
+.preview-viewport {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: grab;
+}
+.preview-viewport:active {
+  cursor: grabbing;
+}
+
+/* 缩放平移包裹层 */
+.preview-transform-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+}
+.preview-transform-wrapper svg {
+  max-width: none !important;
+  max-height: none !important;
+  height: auto;
+  user-select: none;
+  pointer-events: none; /* 防止 SVG 内部链接或文本干扰拖动 */
+}
+
+/* 3. 控制面板与按钮 */
+.mermaid-preview-modal .preview-close-btn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 100001;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+.mermaid-preview-modal .preview-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+.preview-control-bar {
+  position: absolute;
+  bottom: 32px;
+  z-index: 100001;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  background: rgba(30, 30, 30, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.preview-control-bar .control-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 99px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.preview-control-bar .control-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.preview-control-bar .control-btn svg {
+  stroke-width: 2.25;
+}
+
+.preview-control-bar .control-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+}
+
+.preview-control-bar .btn-close {
+  color: #ff5f56;
+}
+.preview-control-bar .btn-close:hover {
+  background: rgba(255, 95, 86, 0.15);
+  color: #ff5f56;
+}

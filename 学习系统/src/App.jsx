@@ -203,6 +203,45 @@ function App() {
       LEARNING_CONTENT.modules.push(privateModule);
       setActiveContent(LEARNING_CONTENT);
       setContentVersion(v => v + 1);
+
+      // 后台静默并发拉取所有私密文档内容并解析出题目，保证“模块刷题”与“随堂测验”开箱即用
+      mdFiles.forEach(async (file, idx) => {
+        try {
+          const docRes = await fetch(`https://api.github.com/repos/${repo}/contents/${file.path}?ref=${branch}`, {
+            headers: {
+              'Authorization': `token ${pat}`,
+              'Accept': 'application/vnd.github+json'
+            }
+          });
+          if (docRes.ok) {
+            const docData = await docRes.json();
+            const rawMarkdown = decodeURIComponent(escape(atob(docData.content.replace(/\s/g, ''))));
+            
+            const currentMod = LEARNING_CONTENT.modules.find(m => m.id === 'private-interview');
+            const targetDoc = currentMod?.docs[idx];
+            if (targetDoc) {
+              targetDoc.content = rawMarkdown;
+              
+              const quizMatch = rawMarkdown.match(/<!--\s*quiz:\s*([\s\S]*?)\s*-->/);
+              if (quizMatch) {
+                try {
+                  const parsedQuiz = JSON.parse(quizMatch[1]);
+                  if (Array.isArray(parsedQuiz)) {
+                    targetDoc.quiz = parsedQuiz;
+                  }
+                } catch (e) {
+                  console.error(`静默解析 [${file.path}] 测验题目失败:`, e);
+                }
+              }
+              // 触发应用状态的局部响应式更新
+              setActiveContent({ ...LEARNING_CONTENT });
+              setContentVersion(v => v + 1);
+            }
+          }
+        } catch (e) {
+          console.error(`静默预加载 [${file.path}] 失败:`, e);
+        }
+      });
     } catch (err) {
       console.error('拉取私密代码树失败:', err);
       showToast('⚠️ 拉取私密资源目录失败，请检查配置与网络');
@@ -1089,7 +1128,7 @@ function App() {
               onToggleImmersive={() => setImmersiveMode(v => !v)}
             />
           )}
-          {page === 'drill' && <DrillSelect drillStatCache={drillStatCache} onStartDrill={startDrill} />}
+          {page === 'drill' && <DrillSelect modules={LEARNING_CONTENT.modules} drillStatCache={drillStatCache} onStartDrill={startDrill} />}
           {page === 'wrongbook' && (
             <WrongBookPage
               wrongBookCache={wrongBookCache}

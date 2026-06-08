@@ -1,5 +1,10 @@
 import { LEARNING_CONTENT } from '../../data/learning-content.js';
 
+let activeContent = LEARNING_CONTENT;
+export function setActiveContent(content) {
+  activeContent = content;
+}
+
 export const QUESTION_TYPE_ORDER = {
   single: 0,
   multiple: 1,
@@ -47,7 +52,7 @@ export function orderQuestionsByType(questions) {
 }
 
 export function getRawModuleQuestions(moduleId) {
-  const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
+  const module = activeContent.modules.find(m => m.id === moduleId);
   if (!module) return [];
   return module.docs.flatMap((doc, docIdx) =>
     (doc.quiz || []).map((q, qi) => withQuestionSource(module, doc, docIdx, q, qi))
@@ -114,7 +119,7 @@ export function selectDrillBatch(questions, drillStatCache, limit = DEFAULT_DRIL
 }
 
 export function getDocQuestions(moduleId, docIdx) {
-  const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
+  const module = activeContent.modules.find(m => m.id === moduleId);
   const doc = module?.docs[docIdx];
   if (!module || !doc) return [];
   return orderQuestionsByType((doc.quiz || []).map((q, qi) => withQuestionSource(module, doc, docIdx, q, qi)));

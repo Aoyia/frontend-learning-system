@@ -5,6 +5,25 @@ import { ArticleToc } from '../components/ArticleToc.jsx';
 
 export function Article({ module, docIdx, progressCache, onHome, onModuleHome, onNavToDoc, onMarkDone, onStartQuiz, onGoDrill, immersiveMode, onToggleImmersive }) {
   const doc = module.docs[docIdx];
+  
+  if (!doc) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center text-text-secondary max-w-md mx-auto min-h-[40vh]">
+        <span className="text-4xl mb-4">⚠️</span>
+        <h3 className="text-lg font-bold text-text-strong mb-2">文章暂未加载或不存在</h3>
+        <p className="text-[13px] leading-relaxed mb-5">
+          请检查您的网络连接是否顺畅，或者点击页面右上角的 🔒 锁图标，重新检查并保存您的 GitHub 个人访问令牌 (PAT) 与仓库配置。
+        </p>
+        <button 
+          className="px-4 py-2 rounded-lg border border-border bg-surface hover:bg-surface-alt transition-colors duration-150 cursor-pointer text-[13px] font-semibold text-text-strong" 
+          onClick={onHome}
+        >
+          返回首页
+        </button>
+      </div>
+    );
+  }
+
   const isDone = progressCache[`${module.id}__${docIdx}`];
   const prev = docIdx > 0 ? module.docs[docIdx - 1] : null;
   const next = docIdx < module.docs.length - 1 ? module.docs[docIdx + 1] : null;

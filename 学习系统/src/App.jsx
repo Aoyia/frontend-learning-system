@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -15,6 +15,7 @@ import { WrongBookPage } from './pages/WrongBookPage.jsx';
 import { QuizPage } from './pages/QuizPage.jsx';
 import { QuizResult } from './pages/QuizResult.jsx';
 import Sidebar from './components/Sidebar.jsx';
+import { PrivateResources } from './pages/PrivateResources.jsx';
 import AnswerCard from './components/AnswerCard.jsx';
 import { PetWidget } from './components/PetWidget.jsx';
 import { PetPanel } from './components/PetPanel.jsx';
@@ -29,6 +30,7 @@ import {
   getQuestionByQid,
   isAnswerCorrect,
   orderQuestionsByType,
+  setActiveContent,
 } from './utils/quiz.js';
 import { getBreakerCard, getBreakerQuestions } from './utils/techBreaker.js';
 import {
@@ -79,6 +81,15 @@ function App() {
   const logoSpeedRef = useRef(0);
   const [flyEffects, setFlyEffects] = useState([]);
   const [user, setUser] = useState(null);
+  const isAdmin = useMemo(() => {
+    if (!user?.email) return false;
+    const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim());
+    return adminEmails.includes(user.email);
+  }, [user]);
+
+  const [contentVersion, setContentVersion] = useState(0);
+  const [githubModalOpen, setGithubModalOpen] = useState(false);
+
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [authLoaded, setAuthLoaded] = useState(false);
   const [showSyncPrompt, setShowSyncPrompt] = useState(false);
@@ -111,12 +122,154 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setAuthLoaded(true);
+      if (!session) {
+        localStorage.removeItem('github_pat');
+        localStorage.removeItem('github_repo');
+        localStorage.removeItem('github_branch');
+        // 安全抹除内存中的私密模块
+        LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
+        setActiveContent(LEARNING_CONTENT);
+        setContentVersion(v => v + 1);
+      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
+
+  // 核心拉取：在运行时通过 GitHub API 将私密仓库平铺文件树组装为临时的系统内置模块
+  const loadPrivateModule = useCallback(async () => {
+    if (!isAdmin) {
+      const originalLen = LEARNING_CONTENT.modules.length;
+      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
+      if (LEARNING_CONTENT.modules.length !== originalLen) {
+        setActiveContent(LEARNING_CONTENT);
+        setContentVersion(v => v + 1);
+      }
+      return;
+    }
+
+    const pat = localStorage.getItem('github_pat');
+    const repo = localStorage.getItem('github_repo');
+    const branch = localStorage.getItem('github_branch') || 'main';
+
+    if (!pat || !repo) {
+      const originalLen = LEARNING_CONTENT.modules.length;
+      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
+      if (LEARNING_CONTENT.modules.length !== originalLen) {
+        setActiveContent(LEARNING_CONTENT);
+        setContentVersion(v => v + 1);
+      }
+      return;
+    }
+
+    try {
+      // 动态向 GitHub 请求平铺的完整树架构
+      const res = await fetch(`https://api.github.com/repos/${repo}/git/trees/${branch}?recursive=1`, {
+        headers: {
+          'Authorization': `token ${pat}`,
+          'Accept': 'application/vnd.github+json'
+        }
+      });
+      if (!res.ok) throw new Error(`拉取失败 (HTTP ${res.status})`);
+      const data = await res.json();
+      const tree = data.tree || [];
+
+      // 仅保留所有的 Markdown 文档，并按字母序对齐
+      const mdFiles = tree
+        .filter(item => item.type === 'blob' && item.path.endsWith('.md'))
+        .sort((a, b) => a.path.localeCompare(b.path, 'zh-CN'));
+
+      const privateModule = {
+        id: 'private-interview',
+        name: '🔒 私密面试资源',
+        icon: '🔒',
+        desc: '实时拉取您的 GitHub 私密仓库，包含您的专属项目经验与面试题库。',
+        docs: mdFiles.map(file => ({
+          title: file.path.replace(/\.md$/, '').split('/').pop(), // 展示叶子文件名
+          path: file.path,
+          content: '', // 点击时懒加载拉取
+          difficulty: '进阶',
+          docMeta: {
+            sourceType: 'original',
+            updated: '实时拉取'
+          },
+          quiz: []
+        }))
+      };
+
+      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
+      LEARNING_CONTENT.modules.push(privateModule);
+      setActiveContent(LEARNING_CONTENT);
+      setContentVersion(v => v + 1);
+    } catch (err) {
+      console.error('拉取私密代码树失败:', err);
+      showToast('⚠️ 拉取私密资源目录失败，请检查配置与网络');
+    }
+  }, [isAdmin]);
+
+  // 初始化或登录态发生变化时触发拉取
+  useEffect(() => {
+    loadPrivateModule();
+  }, [loadPrivateModule]);
+
+  // 监听私有文章的懒加载拉取与题目解析拦截
+  useEffect(() => {
+    if (currentModuleId !== 'private-interview' || page !== 'learn') return;
+
+    const module = LEARNING_CONTENT.modules.find(m => m.id === 'private-interview');
+    const doc = module?.docs[currentDocIdx];
+    if (!doc || doc.content) return; // 已经加载过内容，跳过
+
+    const loadContent = async () => {
+      const savedPat = localStorage.getItem('github_pat');
+      const savedRepo = localStorage.getItem('github_repo');
+      const savedBranch = localStorage.getItem('github_branch');
+      if (!savedPat || !savedRepo) return;
+
+      try {
+        showToast('🔒 正在实时拉取私密内容...');
+        const res = await fetch(`https://api.github.com/repos/${savedRepo}/contents/${doc.path}?ref=${savedBranch}`, {
+          headers: {
+            'Authorization': `token ${savedPat}`,
+            'Accept': 'application/vnd.github+json'
+          }
+        });
+        if (!res.ok) throw new Error(`加载文件失败 (HTTP ${res.status})`);
+        const data = await res.json();
+
+        // Base64 解码，支持中文字符集
+        const rawMarkdown = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))));
+
+        // 注入文档内容
+        doc.content = rawMarkdown;
+
+        // 提取文档底部的随堂测验，规范示例：<!-- quiz: [...] -->
+        const quizMatch = rawMarkdown.match(/<!--\s*quiz:\s*([\s\S]*?)\s*-->/);
+        if (quizMatch) {
+          try {
+            const parsedQuiz = JSON.parse(quizMatch[1]);
+            if (Array.isArray(parsedQuiz)) {
+              doc.quiz = parsedQuiz;
+            }
+          } catch (e) {
+            console.error('解析私密测验题目失败:', e);
+          }
+        }
+
+        setActiveContent(LEARNING_CONTENT);
+        setContentVersion(v => v + 1);
+        showToast('🔒 私密内容拉取成功！');
+      } catch (err) {
+        console.error('加载私密资源文章失败:', err);
+        doc.content = `### ❌ 加载失败\n\n无法从 GitHub 仓库拉取该文档内容，请检查 Token 权限或网络连接。\n\n错误信息：${err.message}`;
+        setContentVersion(v => v + 1);
+      }
+    };
+
+    loadContent();
+  }, [currentModuleId, currentDocIdx, page, contentVersion]);
 
   // 同步完成后重载本地 IndexedDB 缓存并刷新视图
   async function reloadLocalCaches() {
@@ -395,7 +548,7 @@ function App() {
       return;
     }
     navigate('/', { replace: true });
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, isAdmin, contentVersion]);
 
   useEffect(() => {
     if (page !== 'quiz' || quizState) return;
@@ -839,6 +992,17 @@ function App() {
         </div>
 
         <div data-element="actions" className="shrink-0 flex items-center gap-1.5 pr-4 md:pr-6 pl-2">
+          {isAdmin && (
+            <button
+              className={`w-9 h-9 flex items-center justify-center rounded-lg border cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary ${
+                localStorage.getItem('github_pat') ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-surface-alt border-border'
+              }`}
+              onClick={() => setGithubModalOpen(true)}
+              title={localStorage.getItem('github_pat') ? '已配置私有库 (点击管理)' : '未配置私有库 (点击绑定)'}
+            >
+              🔒
+            </button>
+          )}
           <PetWidget petState={petState} onOpen={() => setPetPanelOpen(true)} />
           <button
             className={`w-9 h-9 flex items-center justify-center rounded-lg border cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary ${
@@ -996,9 +1160,13 @@ function App() {
           onClose={handleDismissSyncPrompt}
         />
       )}
+      <PrivateResources
+        isOpen={githubModalOpen}
+        onClose={() => setGithubModalOpen(false)}
+        onSaveSuccess={loadPrivateModule}
+      />
     </>
   );
 }
-
 
 export default App;

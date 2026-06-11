@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { renderMarkdownWithHeadings } from '../utils/markdown.js';
 import { getDifficultyClass } from '../utils/quiz.js';
 import { getBreakerCard } from '../utils/techBreaker.js';
@@ -7,6 +8,26 @@ import { ArticleToc } from '../components/ArticleToc.jsx';
 export function TechBreakerCard({ nodeId, onBack, onHome, onStartQuiz }) {
   const card = getBreakerCard(nodeId);
   const rendered = useMemo(() => renderMarkdownWithHeadings(card?.content || ''), [card?.content]);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!card || !location.hash) return;
+
+    const timer = setTimeout(() => {
+      try {
+        const id = decodeURIComponent(location.hash.slice(1));
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } catch (e) {
+        console.error('Failed to scroll to breaker card hash anchor:', e);
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [location.hash, rendered.html]);
   
   if (!card) {
     return (
@@ -50,7 +71,11 @@ export function TechBreakerCard({ nodeId, onBack, onHome, onStartQuiz }) {
           </div>
         </div>
       </div>
-      <ArticleToc items={rendered.tocItems} className="hidden lg:block" />
+      <ArticleToc 
+        items={rendered.tocItems} 
+        className="hidden lg:block" 
+        onItemClick={(id) => navigate({ pathname: location.pathname, search: location.search, hash: `#${id}` })}
+      />
     </div>
   );
 }

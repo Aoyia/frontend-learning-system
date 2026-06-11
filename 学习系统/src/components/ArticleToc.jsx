@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Tooltip } from '@arco-design/web-react';
+import { useNavigate } from 'react-router-dom';
 import '@arco-design/web-react/es/style/index.css';
 import '@arco-design/web-react/es/Tooltip/style/index.css';
 
@@ -8,6 +9,7 @@ export function ArticleToc({ items, className = '' }) {
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimerRef = useRef(null);
   const itemKey = items.map(item => item.id).join('|');
+  const navigate = useNavigate();
 
   useEffect(() => {
     setActiveId(items[0]?.id || '');
@@ -44,7 +46,7 @@ export function ArticleToc({ items, className = '' }) {
   if (!items.length) return null;
 
   function scrollToHeading(id) {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    navigate({ hash: `#${id}` });
   }
 
   function handleTocScroll() {

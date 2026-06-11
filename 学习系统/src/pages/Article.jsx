@@ -1,10 +1,32 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { renderMarkdownWithHeadings } from '../utils/markdown.js';
 import { getDifficultyClass, sourceTypeLabel } from '../utils/quiz.js';
 import { ArticleToc } from '../components/ArticleToc.jsx';
 
 export function Article({ module, docIdx, progressCache, onHome, onModuleHome, onNavToDoc, onMarkDone, onStartQuiz, onGoDrill, immersiveMode, onToggleImmersive }) {
   const doc = module.docs[docIdx];
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!doc || !location.hash) return;
+
+    // 延迟 150ms 确保 markdown DOM 已完全渲染并挂载
+    const timer = setTimeout(() => {
+      try {
+        const id = decodeURIComponent(location.hash.slice(1));
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } catch (e) {
+        console.error('Failed to scroll to hash anchor:', e);
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [location.hash, doc?.content]); // 监听 hash 与文章内容数据的变化
   
   if (!doc) {
     return (
@@ -105,6 +127,7 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
       <ArticleToc 
         items={rendered.tocItems} 
         className={immersiveMode ? 'hidden lg:block' : 'hidden min-[1360px]:block'}
+        onItemClick={(id) => navigate({ pathname: location.pathname, search: location.search, hash: `#${id}` })}
       />
     </div>
   );

@@ -388,7 +388,7 @@ D. 让回调在 requestAnimationFrame 中执行
 🔍 核心原理解析（防拷打）：
 1. `nextTick` 的实现机制非常轻量：它直接返回 `currentFlushPromise || resolvedPromise`，这里的 `currentFlushPromise` 指向的是调度器当前正在调度的、包含 `flushJobs` 的那个微任务 Promise。
 2. 因此，`nextTick` 的回调仅仅是被排在了本轮微任务队列中 `flushJobs`（也就是 DOM 更新）的后面。当 DOM 更新完成后，当前微任务继续向下执行并 resolve，仍然在同一轮微任务队列中，并不会让出 CPU 去等待其他的宏任务。
-3. 进一步拓展大厂面试追问：如果有两个连续的 `await nextTick()`，它们会在不同的微任务中吗？如果在一轮 DOM 更新执行期间，第一个 `await nextTick()` 会在当前 flush 结束时被 resolve。由于此时 `currentFlushPromise` 还没有被重置为 `null`，第二个 `nextTick()` 依然会挂载在同一个 Promise 上，但它们会作为微任务队列中的先后步骤顺序执行。
+3. 进一步拓展大厂面试追问：如果有两个连续的 `await nextTick()`，它们会在不同的微任务中吗？会。第一个 `await nextTick()` 挂载在 `currentFlushPromise` 上，在本轮 DOM 更新（`flushJobs`）完成并 resolve 时被唤醒。由于 `flushJobs` 的 `finally` 块中已同步将 `currentFlushPromise` 重置为了 `null`，当第一个 `await` 解决并继续执行时，第二个 `nextTick()` 只能获取到 `resolvedPromise`（即 `Promise.resolve()`），并被作为一个全新的微任务放入微任务队列中。因此，它们会在不同的微任务中按先后顺序执行。
 
 ### Q8 [single]
 在以下 Vue 3 代码段中，`console.log` 最终会输出什么？

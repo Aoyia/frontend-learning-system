@@ -25,10 +25,16 @@ export function normalizeMarkdown(content) {
 
 export function stripHeadingText(text) {
   return text
-    .replace(/<[^>]+>/g, '')
-    .replace(/[`*_~[\]()#]/g, '')
+    // 1. 优先剥离 Markdown 链接格式 [文字](链接) -> 保留“文字”
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // 2. 剥离 Wiki 链接 [[链接|显示文字]] 或 [[链接]] 格式
+    .replace(/\[\[([^|\]]+)\|([^\]]+)\]\]/g, '$2')
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
+    // 3. 再剥离其余 markdown 特殊字符与 HTML 标签
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
+    .replace(/<[^>]+>/g, '')
+    .replace(/[`*_~[\]()#]/g, '')
     .trim();
 }
 

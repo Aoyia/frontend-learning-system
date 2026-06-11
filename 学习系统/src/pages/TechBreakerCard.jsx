@@ -24,7 +24,7 @@ export function TechBreakerCard({ nodeId, onBack, onHome, onStartQuiz }) {
   const diffBadgeColor = diffClass === 'easy' ? 'bg-success-light text-success' : diffClass === 'medium' ? 'bg-warning-light text-warning' : 'bg-danger-light text-danger';
 
   return (
-    <div data-component="tech-breaker-card" className="grid grid-cols-1 xl:grid-cols-[minmax(0,800px)_220px] max-w-[1080px] gap-7 items-start justify-center mx-auto">
+    <div data-component="tech-breaker-card" className="grid grid-cols-1 lg:grid-cols-[minmax(0,800px)_220px] max-w-[800px] lg:max-w-[1080px] gap-7 items-start justify-center mx-auto">
       <div className="w-full mx-auto max-w-[800px]">
         <div className="mb-6 pb-5 border-b border-border">
           <div className="text-[12px] text-text-secondary mb-2">
@@ -50,7 +50,7 @@ export function TechBreakerCard({ nodeId, onBack, onHome, onStartQuiz }) {
           </div>
         </div>
       </div>
-      <ArticleToc items={rendered.tocItems} />
+      <ArticleToc items={rendered.tocItems} className="hidden lg:block" />
     </div>
   );
 }

@@ -35,7 +35,7 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
   const diffBadgeColor = diffClass === 'easy' ? 'bg-success-light text-success' : diffClass === 'medium' ? 'bg-warning-light text-warning' : 'bg-danger-light text-danger';
 
   return (
-    <div data-component="article-page" className={`grid grid-cols-1 ${immersiveMode ? 'xl:grid-cols-[220px_minmax(0,720px)_220px] max-w-[1220px]' : 'xl:grid-cols-[minmax(0,800px)_220px] max-w-[1080px]'} gap-7 items-start justify-center mx-auto`}>
+    <div data-component="article-page" className={`grid grid-cols-1 ${immersiveMode ? 'lg:grid-cols-[minmax(0,720px)_220px] xl:grid-cols-[220px_minmax(0,720px)_220px] max-w-[720px] lg:max-w-[968px] xl:max-w-[1220px]' : 'min-[1360px]:grid-cols-[minmax(0,800px)_220px] max-w-[800px] min-[1360px]:max-w-[1080px]'} gap-7 items-start justify-center mx-auto`}>
       {immersiveMode && <div className="hidden xl:block" />}
       <div className={`w-full mx-auto ${immersiveMode ? 'max-w-[720px]' : 'max-w-[800px]'}`}>
         <div data-element="article-meta" className="mb-6 pb-5 border-b border-border">
@@ -102,7 +102,10 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
           ) : <div className="flex-1" />}
         </div>
       </div>
-      <ArticleToc items={rendered.tocItems} />
+      <ArticleToc 
+        items={rendered.tocItems} 
+        className={immersiveMode ? 'hidden lg:block' : 'hidden min-[1360px]:block'}
+      />
     </div>
   );
 }

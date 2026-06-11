@@ -7,7 +7,7 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
-    "yuan-ui": "workspace:*",
+    "@arco-design/web-react": "^2.66.15",
     "@supabase/supabase-js": "^2.106.2",
     "@vitejs/plugin-react": "^4.3.4",
     "gsap": "^3.15.0",
@@ -17,7 +17,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.3",
-    "vite": "^5.4.20"
+    "vite": "^5.4.20",
+    "yuan-ui": "workspace:*"
   },
   "devDependencies": {
     "autoprefixer": "^10.5.0",

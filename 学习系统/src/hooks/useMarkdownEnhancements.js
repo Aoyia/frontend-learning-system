@@ -61,13 +61,13 @@ export function useMarkdownEnhancements({ page, currentModuleId, currentDocIdx, 
 
                 wrapper.appendChild(trigger);
 
-                // 绑定点击事件：点击按钮或流程图本身放大
-                const svgElement = wrapper.querySelector('svg');
-                if (!svgElement) return;
-
+                // 绑定点击事件：点击按钮或流程图本身放大 (动态获取最新的 SVG，防止异步渲染延迟导致节点不存在)
                 const openPreview = (e) => {
                   e.stopPropagation();
-                  initMermaidPreview(svgElement);
+                  const svgElement = wrapper.querySelector('svg');
+                  if (svgElement) {
+                    initMermaidPreview(svgElement);
+                  }
                 };
 
                 trigger.addEventListener('click', openPreview);
@@ -83,6 +83,15 @@ export function useMarkdownEnhancements({ page, currentModuleId, currentDocIdx, 
 
     return () => {
       cancelled = true;
+      // 彻底清理由于路由或模块切换导致挂起的弹窗并注销事件，防止内存泄漏
+      const activeModals = document.querySelectorAll('.mermaid-preview-modal');
+      activeModals.forEach(modal => {
+        if (typeof modal._destroyImmediate === 'function') {
+          modal._destroyImmediate();
+        } else {
+          modal.remove();
+        }
+      });
     };
   }, [page, currentModuleId, currentDocIdx, quizPageIdx, submittedPages, theme]);
 }
@@ -94,16 +103,51 @@ function initMermaidPreview(srcSvg) {
   clonedSvg.removeAttribute('width');
   clonedSvg.removeAttribute('height');
 
-  const viewBox = srcSvg.viewBox ? srcSvg.viewBox.baseVal : null;
-  const svgWidth = (viewBox && viewBox.width) ? viewBox.width : (srcSvg.clientWidth || 600);
-  const svgHeight = (viewBox && viewBox.height) ? viewBox.height : (srcSvg.clientHeight || 400);
+  // 安全且高兼容性地获取 SVG 的原始设计尺寸和 viewBox 比例
+  let svgWidth = 600;
+  let svgHeight = 400;
+
+  // 优先直接解析 viewBox 属性字面值，这能最快且最稳妥地获取原始设计宽高
+  const viewBoxAttr = srcSvg.getAttribute('viewBox');
+  if (viewBoxAttr) {
+    const parts = viewBoxAttr.split(/\s+/);
+    if (parts.length >= 4) {
+      const w = parseFloat(parts[2]);
+      const h = parseFloat(parts[3]);
+      if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
+        svgWidth = w;
+        svgHeight = h;
+      }
+    }
+  } else {
+    // 降级使用 viewBox 属性的 DOM 接口或真实渲染尺寸
+    try {
+      const viewBox = srcSvg.viewBox ? srcSvg.viewBox.baseVal : null;
+      if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
+        svgWidth = viewBox.width;
+        svgHeight = viewBox.height;
+      } else {
+        const attrW = parseFloat(srcSvg.getAttribute('width'));
+        const attrH = parseFloat(srcSvg.getAttribute('height'));
+        if (!isNaN(attrW) && attrW > 0 && !isNaN(attrH) && attrH > 0) {
+          svgWidth = attrW;
+          svgHeight = attrH;
+        } else if (srcSvg.clientWidth > 0 && srcSvg.clientHeight > 0) {
+          svgWidth = srcSvg.clientWidth;
+          svgHeight = srcSvg.clientHeight;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to resolve SVG dimensions:', e);
+    }
+  }
 
   clonedSvg.setAttribute('width', svgWidth);
   clonedSvg.setAttribute('height', svgHeight);
   clonedSvg.style.width = `${svgWidth}px`;
   clonedSvg.style.height = `${svgHeight}px`;
 
-  // 2. 动态创建 Modal DOM 结构并插入
+  // 2. 动态创建 Modal DOM 结构并插入 (加上 mermaid class 保证样式匹配)
   const modal = document.createElement('div');
   modal.className = 'mermaid-preview-modal';
   modal.innerHTML = `
@@ -114,7 +158,7 @@ function initMermaidPreview(srcSvg) {
       </svg>
     </button>
     <div class="preview-viewport">
-      <div class="preview-transform-wrapper"></div>
+      <div class="preview-transform-wrapper mermaid"></div>
     </div>
     <div class="preview-control-bar">
       <button class="control-btn" id="btn-zoom-in" title="放大">
@@ -215,6 +259,10 @@ function initMermaidPreview(srcSvg) {
     viewport.style.cursor = 'grabbing';
     startX = e.clientX - translateX;
     startY = e.clientY - translateY;
+
+    // 按下鼠标时动态绑定全局移动和释放事件，减少 window 的冗余高频事件注册
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
   };
 
   const handleMouseMove = (e) => {
@@ -228,12 +276,13 @@ function initMermaidPreview(srcSvg) {
     if (isDragging) {
       isDragging = false;
       viewport.style.cursor = 'grab';
+      // 释放鼠标时立即解绑全局事件
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     }
   };
 
   viewport.addEventListener('mousedown', handleMouseDown);
-  window.addEventListener('mousemove', handleMouseMove);
-  window.addEventListener('mouseup', handleMouseUp);
 
   // 8. 操作按钮事件绑定
   const zoomIn = () => {
@@ -261,9 +310,8 @@ function initMermaidPreview(srcSvg) {
   // 9. 关闭销毁逻辑与事件解绑
   const destroyModal = () => {
     modal.classList.remove('show');
-    // 监听淡出动画结束后移除节点
+    // 监听淡出动画结束后移除节点并完全注销事件
     setTimeout(() => {
-      // 彻底移除全局监听器，防止内存泄漏
       viewport.removeEventListener('wheel', handleWheel);
       viewport.removeEventListener('mousedown', handleMouseDown);
       viewport.removeEventListener('click', handleViewportClick);
@@ -272,6 +320,17 @@ function initMermaidPreview(srcSvg) {
       window.removeEventListener('keydown', handleKeyDown);
       modal.remove();
     }, 250);
+  };
+
+  // 挂载一个立即销毁的接口，供 Hook cleanup 在组件卸载/页面切换时同步调用
+  modal._destroyImmediate = () => {
+    viewport.removeEventListener('wheel', handleWheel);
+    viewport.removeEventListener('mousedown', handleMouseDown);
+    viewport.removeEventListener('click', handleViewportClick);
+    window.removeEventListener('mousemove', handleMouseMove);
+    window.removeEventListener('mouseup', handleMouseUp);
+    window.removeEventListener('keydown', handleKeyDown);
+    modal.remove();
   };
 
   const handleKeyDown = (e) => {

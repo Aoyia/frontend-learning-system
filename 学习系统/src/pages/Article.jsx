@@ -4,7 +4,7 @@ import { renderMarkdownWithHeadings } from '../utils/markdown.js';
 import { getDifficultyClass, sourceTypeLabel } from '../utils/quiz.js';
 import { ArticleToc } from '../components/ArticleToc.jsx';
 
-export function Article({ module, docIdx, progressCache, onHome, onModuleHome, onNavToDoc, onMarkDone, onStartQuiz, onGoDrill, immersiveMode, onToggleImmersive }) {
+export function Article({ module, docIdx, progressCache, onHome, onModuleHome, onNavToDoc, onMarkDone, onStartQuiz, onGoDrill, immersiveMode, onToggleImmersive, customScrollTo }) {
   const doc = module.docs[docIdx];
   const location = useLocation();
   const navigate = useNavigate();
@@ -18,7 +18,11 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
         const id = decodeURIComponent(location.hash.slice(1));
         const element = document.getElementById(id);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (customScrollTo) {
+            customScrollTo(element);
+          } else {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
         }
       } catch (e) {
         console.error('Failed to scroll to hash anchor:', e);
@@ -26,7 +30,7 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [location.hash, doc?.content]); // 监听 hash 与文章内容数据的变化
+  }, [location.hash, doc?.content, customScrollTo]); // 监听 hash 与文章内容数据的变化
   
   if (!doc) {
     return (

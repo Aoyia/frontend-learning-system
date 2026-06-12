@@ -135,6 +135,20 @@ body {
   flex-direction: column;
 }
 
+/* ========== GLASSMORPHISM NAV & OVERLAY ========== */
+.top-nav-glass {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.scroll-blur-overlay {
+  background-color: color-mix(in srgb, var(--bg) 15%, transparent);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+
 /* 统一自定义滚动条 */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

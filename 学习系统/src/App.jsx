@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { flushSync } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { LEARNING_CONTENT } from '../data/learning-content.js';
-import { dbDelete, dbPut } from './storage/learnDb.js';
+import { dbPut } from './storage/learnDb.js';
 import { Home } from './pages/Home.jsx';
 import { CapabilityRoadmap } from './pages/CapabilityRoadmap.jsx';
 import { TechBreakerMap } from './pages/TechBreakerMap.jsx';
@@ -15,36 +14,30 @@ import { WrongBookPage } from './pages/WrongBookPage.jsx';
 import { QuizPage } from './pages/QuizPage.jsx';
 import { QuizResult } from './pages/QuizResult.jsx';
 import Sidebar from './components/Sidebar.jsx';
-import { PrivateResources } from './pages/PrivateResources.jsx';
 import AnswerCard from './components/AnswerCard.jsx';
-import { PetWidget } from './components/PetWidget.jsx';
 import { PetPanel } from './components/PetPanel.jsx';
 import { supabase } from './storage/supabaseClient.js';
-import { SyncModal } from './components/SyncModal.jsx';
-import { SyncPromptCard } from './components/SyncPromptCard.jsx';
 import {
-  DEFAULT_DRILL_LIMIT,
-  createQuizState,
-  getDocQuestions,
-  getDrillQuestions,
-  getQuestionByQid,
-  isAnswerCorrect,
-  orderQuestionsByType,
   setActiveContent,
 } from './utils/quiz.js';
-import { getBreakerCard, getBreakerQuestions } from './utils/techBreaker.js';
+import { getBreakerCard } from './utils/techBreaker.js';
 import {
   PET_EVENT_LIMIT,
   applyPetReward,
   getPetStage,
   makePetEvent,
-  makeQuizReward,
   makeReadReward,
 } from './utils/pet.js';
 import { useImmersiveController } from './hooks/useImmersiveController.js';
 import { useLearningDb } from './hooks/useLearningDb.js';
 import { useMarkdownEnhancements } from './hooks/useMarkdownEnhancements.js';
 import { useThemeController } from './hooks/useThemeController.js';
+
+// 导入拆分出的组件与 Hooks
+import Navbar from './components/Navbar.jsx';
+import { useGithubPrivateModule } from './hooks/useGithubPrivateModule.js';
+import { useCloudSync } from './hooks/useCloudSync.js';
+import { useQuizManager } from './hooks/useQuizManager.js';
 
 const PAGES = ['home', 'roadmap', 'breaker', 'learn', 'drill', 'wrongbook'];
 
@@ -65,45 +58,213 @@ function App() {
     petEvents,
     setPetEvents,
   } = useLearningDb();
+  
   const [page, setPage] = useState('home');
   const { immersiveMode, setImmersiveMode, toolbarVisible } = useImmersiveController(page);
   const [currentModuleId, setCurrentModuleId] = useState(null);
   const [currentDocIdx, setCurrentDocIdx] = useState(0);
   const [currentBreakerNodeId, setCurrentBreakerNodeId] = useState(null);
-  const [quizState, setQuizState] = useState(null);
-  const [answerCardCollapsed, setAnswerCardCollapsed] = useState(false);
-  const [mobileAnswerCardOpen, setMobileAnswerCardOpen] = useState(false);
   const [petPanelOpen, setPetPanelOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   const contentRef = useRef(null);
-  const logoImgRef = useRef(null);
-  const logoSpeedRef = useRef(0);
-  const [flyEffects, setFlyEffects] = useState([]);
+  const scrollBlurOverlayRef = useRef(null);
+  const activeAnimationRef = useRef(null);
+
+  const customScrollTo = useCallback((target) => {
+    const scrollRoot = contentRef.current;
+    if (!scrollRoot || target === undefined || target === null) return;
+
+    if (activeAnimationRef.current) {
+      cancelAnimationFrame(activeAnimationRef.current);
+    }
+
+    let targetTop = 0;
+    if (typeof target === 'number') {
+      targetTop = target;
+    } else {
+      const scrollRootRect = scrollRoot.getBoundingClientRect();
+      const elementRect = target.getBoundingClientRect();
+      targetTop = scrollRoot.scrollTop + elementRect.top - scrollRootRect.top - 24;
+    }
+
+    const maxScroll = scrollRoot.scrollHeight - scrollRoot.clientHeight;
+    const finalTarget = Math.max(0, Math.min(targetTop, maxScroll));
+
+    let currentTop = scrollRoot.scrollTop;
+    let velocity = 0;
+    
+    // 二阶临界阻尼弹簧参数
+    const kSpring = 220; 
+    const cDamping = 30; 
+    
+    let lastTime = performance.now();
+    const overlay = scrollBlurOverlayRef.current;
+
+    const animate = (time) => {
+      let dt = (time - lastTime) / 1000;
+      lastTime = time;
+
+      if (dt > 0.1) dt = 0.1;
+      if (dt <= 0) {
+        activeAnimationRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      const distance = finalTarget - currentTop;
+      const acceleration = kSpring * distance - cDamping * velocity;
+      velocity += acceleration * dt;
+      currentTop += velocity * dt;
+
+      scrollRoot.scrollTop = currentTop;
+
+      const absVelocity = Math.abs(velocity);
+      const blurRadius = Math.min(absVelocity * 0.005, 10);
+      const opacity = Math.min(absVelocity / 400, 1);
+
+      if (overlay) {
+        overlay.style.backdropFilter = `blur(${blurRadius}px)`;
+        overlay.style.webkitBackdropFilter = `blur(${blurRadius}px)`;
+        overlay.style.opacity = `${opacity}`;
+      }
+
+      if (Math.abs(distance) < 0.5 && absVelocity < 5) {
+        scrollRoot.scrollTop = finalTarget;
+        if (overlay) {
+          overlay.style.transition = 'opacity 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease';
+          overlay.style.opacity = '0';
+          overlay.style.backdropFilter = 'blur(0px)';
+          overlay.style.webkitBackdropFilter = 'blur(0px)';
+          setTimeout(() => {
+            if (overlay) overlay.style.transition = 'none';
+          }, 260);
+        }
+        activeAnimationRef.current = null;
+      } else {
+        activeAnimationRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    activeAnimationRef.current = requestAnimationFrame(animate);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (activeAnimationRef.current) {
+        cancelAnimationFrame(activeAnimationRef.current);
+      }
+    };
+  }, []);
+
   const [user, setUser] = useState(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
   const isAdmin = useMemo(() => {
     if (!user?.email) return false;
     const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim());
     return adminEmails.includes(user.email);
   }, [user]);
 
-  const [contentVersion, setContentVersion] = useState(0);
-  const [githubModalOpen, setGithubModalOpen] = useState(false);
+  // 1. 消息提示封装
+  const showToast = useCallback((msg) => {
+    clearTimeout(toastTimer.current);
+    setToast(msg);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  }, []);
 
-  const [syncModalOpen, setSyncModalOpen] = useState(false);
-  const [authLoaded, setAuthLoaded] = useState(false);
-  const [showSyncPrompt, setShowSyncPrompt] = useState(false);
-  const hasPromptedSync = useRef(false);
-  const userRef = useRef(user);
-  const dbRef = useRef(db);
+  // 2. 奖励结算封装
+  const grantPetReward = useCallback(async (reward) => {
+    if (!reward?.xp) return;
+    const now = Date.now();
+    const previousStage = getPetStage(petState.xp || 0);
+    const nextState = applyPetReward(petState, reward, now);
+    const event = makePetEvent(reward, nextState, previousStage, now);
+    setPetState(nextState);
+    setPetEvents(prev => [event, ...prev].slice(0, PET_EVENT_LIMIT));
+    if (db) {
+      await dbPut(db, 'petState', nextState);
+      await dbPut(db, 'petEvents', event);
+    }
+    showToast(`${event.title} · 修为 +${nextState.xp - (petState.xp || 0)}`);
+  }, [db, petState, setPetState, setPetEvents, showToast]);
 
-  useEffect(() => {
-    userRef.current = user;
-  }, [user]);
+  // 3. GitHub 私密模块 Hook
+  const { contentVersion, loadPrivateModule } = useGithubPrivateModule({
+    isAdmin,
+    page,
+    currentModuleId,
+    currentDocIdx,
+    showToast,
+  });
 
-  useEffect(() => {
-    dbRef.current = db;
-  }, [db]);
+  // 同步完成后重载本地 IndexedDB 缓存并刷新视图
+  const reloadLocalCaches = useCallback(async () => {
+    if (!db) return;
+    const { dbGetAll } = await import('./storage/learnDb.js');
+    const { PET_STATE_ID, createDefaultPetState } = await import('./utils/pet.js');
+    
+    const progress = await dbGetAll(db, 'progress');
+    const stats = await dbGetAll(db, 'drillStat');
+    const wrongBook = await dbGetAll(db, 'wrongBook');
+    const savedPetState = await dbGetAll(db, 'petState');
+    const savedPetEvents = await dbGetAll(db, 'petEvents');
+    
+    setProgressCache(Object.fromEntries(progress.map(r => [r.id, r.done])));
+    setDrillStatCache(Object.fromEntries(stats.map(r => [r.qid, r])));
+    setWrongBookCache(Object.fromEntries(wrongBook.filter(r => !r.isDeleted).map(r => [r.qid, r])));
+    setPetState(savedPetState.find(r => r.id === PET_STATE_ID) || createDefaultPetState());
+    setPetEvents(savedPetEvents.sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 12));
+    
+    showToast('云端数据同步成功！');
+  }, [db, setProgressCache, setDrillStatCache, setWrongBookCache, setPetState, setPetEvents, showToast]);
+
+  // 4. 云同步 Hook
+  const {
+    syncModalOpen,
+    setSyncModalOpen,
+    showSyncPrompt,
+    handleDismissSyncPrompt,
+    handleAcceptSyncPrompt,
+  } = useCloudSync({
+    db,
+    user,
+    authLoaded,
+    progressCache,
+    drillStatCache,
+    wrongBookCache,
+    petState,
+    reloadLocalCaches,
+    showToast,
+  });
+
+  // 5. 答题管理 Hook
+  const {
+    quizState,
+    answerCardCollapsed,
+    setAnswerCardCollapsed,
+    mobileAnswerCardOpen,
+    setMobileAnswerCardOpen,
+    startDocQuiz,
+    startBreakerQuiz,
+    startDrill,
+    startWrongBook,
+    toggleOption,
+    submitPage,
+    nextPage,
+    showQuizResult,
+    jumpToQuestion,
+  } = useQuizManager({
+    db,
+    location,
+    navigate,
+    drillStatCache,
+    setDrillStatCache,
+    wrongBookCache,
+    setWrongBookCache,
+    grantPetReward,
+    showToast,
+    setCurrentModuleId,
+    customScrollTo,
+  });
 
   // 监听 Supabase 登录状态变化
   useEffect(() => {
@@ -129,413 +290,61 @@ function App() {
         // 安全抹除内存中的私密模块
         LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
         setActiveContent(LEARNING_CONTENT);
-        setContentVersion(v => v + 1);
+        reloadLocalCaches(); // 触发重载
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [reloadLocalCaches]);
 
-  // 核心拉取：在运行时通过 GitHub API 将私密仓库平铺文件树组装为临时的系统内置模块
-  const loadPrivateModule = useCallback(async () => {
-    if (!isAdmin) {
-      const originalLen = LEARNING_CONTENT.modules.length;
-      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
-      if (LEARNING_CONTENT.modules.length !== originalLen) {
-        setActiveContent(LEARNING_CONTENT);
-        setContentVersion(v => v + 1);
-      }
-      return;
+  const setRoute = useCallback((nextPage, opts = {}) => {
+    if (nextPage === 'home') navigate('/');
+    if (nextPage === 'roadmap') navigate('/roadmap');
+    if (nextPage === 'breaker') navigate(opts.nodeId ? `/breaker/card/${opts.nodeId}` : '/breaker');
+    if (nextPage === 'learn') navigate(opts.moduleId ? `/learn/${opts.moduleId}/${opts.docIdx ?? 0}` : '/learn');
+    if (nextPage === 'drill') navigate('/drill');
+    if (nextPage === 'wrongbook') navigate('/wrongbook');
+  }, [navigate]);
+
+  const navToDoc = useCallback((moduleId, docIdx) => {
+    navigate(`/learn/${moduleId}/${docIdx}`);
+  }, [navigate]);
+
+  const markDone = useCallback(async (moduleId, docIdx, startQuiz) => {
+    const key = `${moduleId}__${docIdx}`;
+    const alreadyDone = progressCache[key];
+    setProgressCache(prev => ({ ...prev, [key]: true }));
+    if (db) await dbPut(db, 'progress', { id: key, done: true });
+    if (!alreadyDone) {
+      const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
+      const docTitle = module?.docs?.[docIdx]?.title || '学习文章';
+      await grantPetReward(makeReadReward(docTitle));
     }
-
-    const pat = localStorage.getItem('github_pat');
-    const repo = localStorage.getItem('github_repo');
-    const branch = localStorage.getItem('github_branch') || 'main';
-
-    if (!pat || !repo) {
-      const originalLen = LEARNING_CONTENT.modules.length;
-      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
-      if (LEARNING_CONTENT.modules.length !== originalLen) {
-        setActiveContent(LEARNING_CONTENT);
-        setContentVersion(v => v + 1);
-      }
-      return;
-    }
-
-    try {
-      // 动态向 GitHub 请求平铺的完整树架构
-      const res = await fetch(`https://api.github.com/repos/${repo}/git/trees/${branch}?recursive=1`, {
-        headers: {
-          'Authorization': `token ${pat}`,
-          'Accept': 'application/vnd.github+json'
-        }
-      });
-      if (!res.ok) throw new Error(`拉取失败 (HTTP ${res.status})`);
-      const data = await res.json();
-      const tree = data.tree || [];
-
-      // 仅保留所有的 Markdown 文档，并按字母序对齐
-      const mdFiles = tree
-        .filter(item => item.type === 'blob' && item.path.endsWith('.md'))
-        .sort((a, b) => a.path.localeCompare(b.path, 'zh-CN'));
-
-      const privateModule = {
-        id: 'private-interview',
-        name: '🔒 私密面试资源',
-        icon: '🔒',
-        desc: '实时拉取您的 GitHub 私密仓库，包含您的专属项目经验与面试题库。',
-        docs: mdFiles.map(file => ({
-          title: file.path.replace(/\.md$/, '').split('/').pop(), // 展示叶子文件名
-          path: file.path,
-          content: '', // 点击时懒加载拉取
-          difficulty: '进阶',
-          docMeta: {
-            sourceType: 'original',
-            updated: '实时拉取'
-          },
-          quiz: []
-        }))
-      };
-
-      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
-      LEARNING_CONTENT.modules.push(privateModule);
-      setActiveContent(LEARNING_CONTENT);
-      setContentVersion(v => v + 1);
-
-      // 后台静默并发拉取所有私密文档内容并解析出题目，保证“模块刷题”与“随堂测验”开箱即用
-      mdFiles.forEach(async (file, idx) => {
-        try {
-          const docRes = await fetch(`https://api.github.com/repos/${repo}/contents/${file.path}?ref=${branch}`, {
-            headers: {
-              'Authorization': `token ${pat}`,
-              'Accept': 'application/vnd.github+json'
-            }
-          });
-          if (docRes.ok) {
-            const docData = await docRes.json();
-            const rawMarkdown = decodeURIComponent(escape(atob(docData.content.replace(/\s/g, ''))));
-            
-            const currentMod = LEARNING_CONTENT.modules.find(m => m.id === 'private-interview');
-            const targetDoc = currentMod?.docs[idx];
-            if (targetDoc) {
-              targetDoc.content = rawMarkdown;
-              
-              const quizMatch = rawMarkdown.match(/<!--\s*quiz:\s*([\s\S]*?)\s*-->/);
-              if (quizMatch) {
-                try {
-                  const parsedQuiz = JSON.parse(quizMatch[1]);
-                  if (Array.isArray(parsedQuiz)) {
-                    targetDoc.quiz = parsedQuiz;
-                  }
-                } catch (e) {
-                  console.error(`静默解析 [${file.path}] 测验题目失败:`, e);
-                }
-              }
-              // 触发应用状态的局部响应式更新
-              setActiveContent({ ...LEARNING_CONTENT });
-              setContentVersion(v => v + 1);
-            }
-          }
-        } catch (e) {
-          console.error(`静默预加载 [${file.path}] 失败:`, e);
-        }
-      });
-    } catch (err) {
-      console.error('拉取私密代码树失败:', err);
-      showToast('⚠️ 拉取私密资源目录失败，请检查配置与网络');
-    }
-  }, [isAdmin]);
-
-  // 初始化或登录态发生变化时触发拉取
-  useEffect(() => {
-    loadPrivateModule();
-  }, [loadPrivateModule]);
-
-  // 监听私有文章的懒加载拉取与题目解析拦截
-  useEffect(() => {
-    if (currentModuleId !== 'private-interview' || page !== 'learn') return;
-
-    const module = LEARNING_CONTENT.modules.find(m => m.id === 'private-interview');
-    const doc = module?.docs[currentDocIdx];
-    if (!doc || doc.content) return; // 已经加载过内容，跳过
-
-    const loadContent = async () => {
-      const savedPat = localStorage.getItem('github_pat');
-      const savedRepo = localStorage.getItem('github_repo');
-      const savedBranch = localStorage.getItem('github_branch');
-      if (!savedPat || !savedRepo) return;
-
-      try {
-        showToast('🔒 正在实时拉取私密内容...');
-        const res = await fetch(`https://api.github.com/repos/${savedRepo}/contents/${doc.path}?ref=${savedBranch}`, {
-          headers: {
-            'Authorization': `token ${savedPat}`,
-            'Accept': 'application/vnd.github+json'
-          }
-        });
-        if (!res.ok) throw new Error(`加载文件失败 (HTTP ${res.status})`);
-        const data = await res.json();
-
-        // Base64 解码，支持中文字符集
-        const rawMarkdown = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))));
-
-        // 注入文档内容
-        doc.content = rawMarkdown;
-
-        // 提取文档底部的随堂测验，规范示例：<!-- quiz: [...] -->
-        const quizMatch = rawMarkdown.match(/<!--\s*quiz:\s*([\s\S]*?)\s*-->/);
-        if (quizMatch) {
-          try {
-            const parsedQuiz = JSON.parse(quizMatch[1]);
-            if (Array.isArray(parsedQuiz)) {
-              doc.quiz = parsedQuiz;
-            }
-          } catch (e) {
-            console.error('解析私密测验题目失败:', e);
-          }
-        }
-
-        setActiveContent(LEARNING_CONTENT);
-        setContentVersion(v => v + 1);
-        showToast('🔒 私密内容拉取成功！');
-      } catch (err) {
-        console.error('加载私密资源文章失败:', err);
-        doc.content = `### ❌ 加载失败\n\n无法从 GitHub 仓库拉取该文档内容，请检查 Token 权限或网络连接。\n\n错误信息：${err.message}`;
-        setContentVersion(v => v + 1);
-      }
-    };
-
-    loadContent();
-  }, [currentModuleId, currentDocIdx, page, contentVersion]);
-
-  // 同步完成后重载本地 IndexedDB 缓存并刷新视图
-  async function reloadLocalCaches() {
-    if (!db) return;
-    const { dbGetAll } = await import('./storage/learnDb.js');
-    const { PET_STATE_ID, createDefaultPetState } = await import('./utils/pet.js');
-    
-    const progress = await dbGetAll(db, 'progress');
-    const stats = await dbGetAll(db, 'drillStat');
-    const wrongBook = await dbGetAll(db, 'wrongBook');
-    const savedPetState = await dbGetAll(db, 'petState');
-    const savedPetEvents = await dbGetAll(db, 'petEvents');
-    
-    setProgressCache(Object.fromEntries(progress.map(r => [r.id, r.done])));
-    setDrillStatCache(Object.fromEntries(stats.map(r => [r.qid, r])));
-    setWrongBookCache(Object.fromEntries(wrongBook.filter(r => !r.isDeleted).map(r => [r.qid, r])));
-    setPetState(savedPetState.find(r => r.id === PET_STATE_ID) || createDefaultPetState());
-    setPetEvents(savedPetEvents.sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 12));
-    
-    showToast('云端数据同步成功！');
-  }
-
-  // 自动后台同步云端数据
-  async function autoSyncProgress() {
-    const currentDb = dbRef.current;
-    const currentUser = userRef.current;
-    if (!currentDb || !currentUser) return;
-
-    try {
-      showToast('☁️ 正在自动同步云端进度...');
-      const { syncLocalAndCloud } = await import('./storage/syncService.js');
-      const result = await syncLocalAndCloud(currentDb, currentUser.id);
-
-      const timeStr = new Date().toLocaleString();
-      localStorage.setItem('last_sync_time', timeStr);
-      localStorage.setItem('last_sync_timestamp', Date.now().toString());
-
-      await reloadLocalCaches();
-      showToast(`🎉 自动同步成功！上传了 ${result.uploadCount} 条，拉取了 ${result.downloadCount} 条记录。`);
-    } catch (err) {
-      console.error('自动同步失败:', err);
-      showToast('⚠️ 自动同步云端进度失败，请检查网络');
-    }
-  }
-
-  // 处理云同步引导提示的确认与取消
-  function handleDismissSyncPrompt() {
-    setShowSyncPrompt(false);
-    localStorage.setItem('last_sync_prompt_time', Date.now().toString());
-  }
-
-  function handleAcceptSyncPrompt() {
-    setShowSyncPrompt(false);
-    localStorage.setItem('last_sync_prompt_time', Date.now().toString());
-    setSyncModalOpen(true);
-  }
-
-  // 监听用户首次活跃
-  useEffect(() => {
-    if (!authLoaded) return;
-
-    const handleFirstActivity = async () => {
-      const currentUser = userRef.current;
-
-      if (currentUser) {
-        // 已登录用户：自动在后台静默同步（内部已实现脏标记与云端全局状态的快速按需判定）
-        window.removeEventListener('mousedown', handleFirstActivity);
-        window.removeEventListener('keydown', handleFirstActivity);
-        window.removeEventListener('touchstart', handleFirstActivity);
-
-        if (hasPromptedSync.current) return;
-        hasPromptedSync.current = true;
-
-        await autoSyncProgress();
-      } else if (supabase) {
-        // 未登录用户：只有本地存在有价值的成果数据时，才认为“有必要”提示
-        const hasData = Object.values(progressCache).some(done => done === true) ||
-                        Object.keys(drillStatCache).length > 0 ||
-                        Object.keys(wrongBookCache).length > 0 ||
-                        (petState && petState.xp > 0);
-
-        if (!hasData) {
-          // 当前没有任何有价值的数据，不提示，并保留事件监听以备后续用户产生数据后触发
-          return;
-        }
-
-        // 一旦决定提示或走提示判定，立即解除事件监听，防止高频重复判定
-        window.removeEventListener('mousedown', handleFirstActivity);
-        window.removeEventListener('keydown', handleFirstActivity);
-        window.removeEventListener('touchstart', handleFirstActivity);
-
-        if (hasPromptedSync.current) return;
-        hasPromptedSync.current = true;
-
-        // 检查冷却时间
-        const lastPrompt = localStorage.getItem('last_sync_prompt_time');
-        const now = Date.now();
-        const COOL_DOWN = 24 * 60 * 60 * 1000; // 24小时
-
-        if (!lastPrompt || now - Number(lastPrompt) > COOL_DOWN) {
-          setShowSyncPrompt(true);
-        }
-      } else {
-        // 未启用云同步服务，直接移除监听
-        window.removeEventListener('mousedown', handleFirstActivity);
-        window.removeEventListener('keydown', handleFirstActivity);
-        window.removeEventListener('touchstart', handleFirstActivity);
-        hasPromptedSync.current = true;
-      }
-    };
-
-    window.addEventListener('mousedown', handleFirstActivity);
-    window.addEventListener('keydown', handleFirstActivity);
-    window.addEventListener('touchstart', handleFirstActivity);
-
-    return () => {
-      window.removeEventListener('mousedown', handleFirstActivity);
-      window.removeEventListener('keydown', handleFirstActivity);
-      window.removeEventListener('touchstart', handleFirstActivity);
-    };
-  }, [authLoaded, progressCache, drillStatCache, wrongBookCache, petState]);
-
-  useEffect(() => {
-    const logo = logoImgRef.current;
-    if (!logo) return;
-
-    let angle = 0;
-    let isHovered = false;
-    let frameId = null;
-
-    const handleMouseEnter = () => { isHovered = true; };
-    const handleMouseLeave = () => { isHovered = false; };
-
-    logo.addEventListener('mouseenter', handleMouseEnter);
-    logo.addEventListener('mouseleave', handleMouseLeave);
-
-    const update = () => {
-      if (isHovered) {
-        logoSpeedRef.current = Math.min(logoSpeedRef.current + 0.45, 25);
-      } else {
-        logoSpeedRef.current = Math.max(logoSpeedRef.current - 0.18, 0);
-      }
-
-      if (logoSpeedRef.current > 0) {
-        angle = (angle + logoSpeedRef.current) % 360;
-        logo.style.transform = `rotate(${angle}deg)`;
-
-        if (logoSpeedRef.current > 8) {
-          const intensity = Math.min((logoSpeedRef.current - 8) / 1.5, 10);
-          logo.style.filter = `drop-shadow(0 0 ${intensity}px rgba(76, 175, 80, 0.9))`;
-        } else {
-          logo.style.filter = 'none';
-        }
-      } else {
-        logo.style.filter = 'none';
-        // 自动平滑对齐摆正
-        if (!isHovered && angle !== 0) {
-          const targetAngle = angle > 180 ? 360 : 0;
-          const diff = targetAngle - angle;
-          if (Math.abs(diff) < 0.5) {
-            angle = 0;
-            logo.style.transform = 'rotate(0deg)';
-          } else {
-            angle += diff * 0.16; // 阻尼回位缓动
-            logo.style.transform = `rotate(${angle}deg)`;
-          }
-        }
-      }
-
-      frameId = requestAnimationFrame(update);
-    };
-
-    frameId = requestAnimationFrame(update);
-
-    return () => {
-      logo.removeEventListener('mouseenter', handleMouseEnter);
-      logo.removeEventListener('mouseleave', handleMouseLeave);
-      cancelAnimationFrame(frameId);
-    };
-  }, []);
-
-  const CULTIVATION_MEMES = [
-    '参天造化露 +1',
-    '法力运转加速！',
-    '修为松动！',
-    '以学代修，突破！',
-    '注入前端灵力！',
-    '灵气暴走！',
-    '筑基近在咫尺！',
-    '道友，代码熟了！',
-    '炼丹中，勿扰！',
-    '前端金丹 +1'
-  ];
-
-  function handleLogoPractise() {
-    logoSpeedRef.current = Math.min(logoSpeedRef.current + 22, 65);
-    const text = CULTIVATION_MEMES[Math.floor(Math.random() * CULTIVATION_MEMES.length)];
-    const id = Math.random().toString(36).substring(2, 9);
-    setFlyEffects(prev => [...prev, { id, text }]);
-    setTimeout(() => {
-      setFlyEffects(prev => prev.filter(item => item.id !== id));
-    }, 900);
-  }
-
+    if (startQuiz) startDocQuiz(moduleId, docIdx);
+  }, [db, progressCache, setProgressCache, grantPetReward, startDocQuiz]);
 
   const currentModule = useMemo(
     () => LEARNING_CONTENT.modules.find(m => m.id === currentModuleId) || null,
     [currentModuleId]
   );
 
+  // 路由解析逻辑与渲染分发保持同步
   useEffect(() => {
     const parts = location.pathname.split('/').filter(Boolean);
     if (parts.length === 0) {
       setPage('home');
-      setQuizState(null);
       setMobileAnswerCardOpen(false);
       return;
     }
     if (parts[0] === 'roadmap') {
       setPage('roadmap');
-      setQuizState(null);
       setMobileAnswerCardOpen(false);
       return;
     }
     if (parts[0] === 'breaker') {
       setPage('breaker');
-      setQuizState(null);
       setMobileAnswerCardOpen(false);
       const nodeId = parts[1] === 'card' ? parts[2] : null;
       if (nodeId && !getBreakerCard(nodeId)) {
@@ -547,7 +356,6 @@ function App() {
     }
     if (parts[0] === 'learn') {
       setPage('learn');
-      setQuizState(null);
       setMobileAnswerCardOpen(false);
       if (parts[1]) {
         const moduleId = parts[1];
@@ -566,13 +374,11 @@ function App() {
     }
     if (parts[0] === 'drill') {
       setPage('drill');
-      setQuizState(null);
       setMobileAnswerCardOpen(false);
       return;
     }
     if (parts[0] === 'wrongbook') {
       setPage('wrongbook');
-      setQuizState(null);
       setMobileAnswerCardOpen(false);
       return;
     }
@@ -590,120 +396,6 @@ function App() {
   }, [location.pathname, navigate, isAdmin, contentVersion]);
 
   useEffect(() => {
-    if (page !== 'quiz' || quizState) return;
-
-    const parts = location.pathname.split('/').filter(Boolean);
-    if (parts[0] !== 'quiz') return;
-    const searchParams = new URLSearchParams(location.search);
-
-    const [, type, moduleId, docIdxText] = parts;
-    const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
-    let docIdx = null;
-    let questions = [];
-    let fallback = '/';
-
-    if (type === 'doc') {
-      fallback = module ? `/learn/${moduleId}/0` : '/learn';
-      docIdx = Number(docIdxText);
-      if (!module || !Number.isInteger(docIdx) || docIdx < 0 || docIdx >= module.docs.length) {
-        navigate(fallback, { replace: true });
-        return;
-      }
-      questions = getDocQuestions(moduleId, docIdx);
-    } else if (type === 'breaker') {
-      fallback = `/breaker/card/${moduleId}`;
-      if (!getBreakerCard(moduleId)) {
-        navigate('/breaker', { replace: true });
-        return;
-      }
-      questions = getBreakerQuestions(moduleId);
-    } else if (type === 'drill') {
-      fallback = '/drill';
-      if (!module) {
-        navigate(fallback, { replace: true });
-        return;
-      }
-      const limitParam = searchParams.get('limit');
-      const limit = limitParam === 'all' ? null : Number(limitParam) || DEFAULT_DRILL_LIMIT;
-      questions = getDrillQuestions(moduleId, drillStatCache, limit);
-    } else if (type === 'wrongbook') {
-      fallback = '/wrongbook';
-      if (!db) return;
-      const targetModuleId = moduleId === 'all' ? null : moduleId;
-      const records = Object.values(wrongBookCache)
-        .filter(record => !targetModuleId || record.moduleId === targetModuleId)
-        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-      questions = records.map(record => getQuestionByQid(record.qid)).filter(Boolean);
-    } else {
-      navigate('/', { replace: true });
-      return;
-    }
-
-    if (!questions.length) {
-      navigate(fallback, { replace: true });
-      return;
-    }
-
-    setCurrentModuleId(moduleId);
-
-    // 尝试从 localStorage 恢复 quizState
-    const savedStateStr = localStorage.getItem('active_quiz_state');
-    let restored = false;
-    if (savedStateStr) {
-      try {
-        const savedState = JSON.parse(savedStateStr);
-        const typeMatch = savedState.type === type;
-        const moduleMatch = savedState.moduleId === moduleId;
-        const docIdxMatch = savedState.docIdx == docIdx; // 兼容 null 与 undefined，或数字与字符串的松散比较
-
-        if (typeMatch && moduleMatch && docIdxMatch && savedState.questions && savedState.questions.length === questions.length) {
-          setQuizState(savedState);
-          restored = true;
-        }
-      } catch (e) {
-        console.error('解析本地保存的刷题状态失败', e);
-      }
-    }
-
-    if (!restored) {
-      setQuizState(createQuizState(type, moduleId, docIdx, questions));
-    }
-
-    setAnswerCardCollapsed(false);
-    setMobileAnswerCardOpen(false);
-  }, [db, drillStatCache, location.pathname, location.search, navigate, page, quizState, wrongBookCache]);
-
-  // 监听 quizState 变化，自动持久化到 localStorage 中，或者在离开刷题/结果页时清除
-  useEffect(() => {
-    if (quizState) {
-      localStorage.setItem('active_quiz_state', JSON.stringify(quizState));
-    } else {
-      const parts = location.pathname.split('/').filter(Boolean);
-      if (parts[0] !== 'quiz' && parts[0] !== 'result') {
-        localStorage.removeItem('active_quiz_state');
-      }
-    }
-  }, [quizState, location.pathname]);
-
-  useEffect(() => {
-    if (page === 'result' && !quizState) {
-      const savedStateStr = localStorage.getItem('active_quiz_state');
-      if (savedStateStr) {
-        try {
-          const savedState = JSON.parse(savedStateStr);
-          if (savedState && savedState.questions) {
-            setQuizState(savedState);
-            return;
-          }
-        } catch (e) {
-          console.error('解析结果页本地状态失败', e);
-        }
-      }
-      navigate('/', { replace: true });
-    }
-  }, [navigate, page, quizState]);
-
-  useEffect(() => {
     contentRef.current?.scrollTo(0, 0);
   }, [location.pathname]);
 
@@ -715,245 +407,6 @@ function App() {
     submittedPages: quizState?.submittedPages,
     theme,
   });
-
-  function showToast(msg) {
-    clearTimeout(toastTimer.current);
-    setToast(msg);
-    toastTimer.current = setTimeout(() => setToast(null), 2500);
-  }
-
-  async function grantPetReward(reward) {
-    if (!reward?.xp) return;
-    const now = Date.now();
-    const previousStage = getPetStage(petState.xp || 0);
-    const nextState = applyPetReward(petState, reward, now);
-    const event = makePetEvent(reward, nextState, previousStage, now);
-    setPetState(nextState);
-    setPetEvents(prev => [event, ...prev].slice(0, PET_EVENT_LIMIT));
-    if (db) {
-      await dbPut(db, 'petState', nextState);
-      await dbPut(db, 'petEvents', event);
-    }
-    showToast(`${event.title} · 修为 +${nextState.xp - (petState.xp || 0)}`);
-  }
-
-  function setRoute(nextPage, opts = {}) {
-    if (nextPage === 'home') navigate('/');
-    if (nextPage === 'roadmap') navigate('/roadmap');
-    if (nextPage === 'breaker') navigate(opts.nodeId ? `/breaker/card/${opts.nodeId}` : '/breaker');
-    if (nextPage === 'learn') navigate(opts.moduleId ? `/learn/${opts.moduleId}/${opts.docIdx ?? 0}` : '/learn');
-    if (nextPage === 'drill') navigate('/drill');
-    if (nextPage === 'wrongbook') navigate('/wrongbook');
-  }
-
-  function navToDoc(moduleId, docIdx) {
-    navigate(`/learn/${moduleId}/${docIdx}`);
-  }
-
-  async function markDone(moduleId, docIdx, startQuiz) {
-    const key = `${moduleId}__${docIdx}`;
-    const alreadyDone = progressCache[key];
-    setProgressCache(prev => ({ ...prev, [key]: true }));
-    if (db) await dbPut(db, 'progress', { id: key, done: true });
-    if (!alreadyDone) {
-      const module = LEARNING_CONTENT.modules.find(m => m.id === moduleId);
-      const docTitle = module?.docs?.[docIdx]?.title || '学习文章';
-      await grantPetReward(makeReadReward(docTitle));
-    }
-    if (startQuiz) startDocQuiz(moduleId, docIdx);
-  }
-
-  function startDocQuiz(moduleId, docIdx) {
-    const questions = getDocQuestions(moduleId, docIdx);
-    if (!questions.length) {
-      showToast('该篇暂无题目');
-      return;
-    }
-    startQuiz('doc', moduleId, docIdx, questions);
-  }
-
-  function startBreakerQuiz(nodeId) {
-    const questions = getBreakerQuestions(nodeId);
-    if (!questions.length) {
-      showToast('这张技术破冰卡片暂无自测题');
-      return;
-    }
-    startQuiz('breaker', nodeId, null, questions);
-  }
-  function startDrill(moduleId, limit = DEFAULT_DRILL_LIMIT) {
-    const questions = getDrillQuestions(moduleId, drillStatCache, limit);
-    if (!questions.length) {
-      showToast('该模块暂无题目');
-      return;
-    }
-    startQuiz('drill', moduleId, null, questions, { limit });
-  }
-
-  function startWrongBook(moduleId = null) {
-    const records = Object.values(wrongBookCache)
-      .filter(record => !moduleId || record.moduleId === moduleId)
-      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    const questions = records.map(record => getQuestionByQid(record.qid)).filter(Boolean);
-    if (!questions.length) {
-      showToast(moduleId ? '该模块暂无错题' : '当前没有错题');
-      return;
-    }
-    startQuiz('wrongbook', moduleId || 'all', null, questions);
-  }
-
-  function startQuiz(type, moduleId, docIdx, questions, options = {}) {
-    const query = type === 'drill' ? `?limit=${options.limit || 'all'}` : '';
-    navigate(`/quiz/${type}/${moduleId}${docIdx === null || docIdx === undefined ? '' : `/${docIdx}`}${query}`);
-    setCurrentModuleId(moduleId);
-    setQuizState(createQuizState(type, moduleId, docIdx, questions));
-    setAnswerCardCollapsed(false);
-    setMobileAnswerCardOpen(false);
-  }
-
-  // 移除了 flushSync 或保持局部修改，以便 toggleOption 可以流畅工作
-  function toggleOption(globalIdx, optIdx) {
-    setQuizState(prev => {
-      const q = prev.questions[globalIdx];
-      const selections = { ...prev.selections };
-      if (q.type === 'multiple') {
-        const arr = Array.isArray(selections[globalIdx]) ? [...selections[globalIdx]] : [];
-        const pos = arr.indexOf(optIdx);
-        if (pos === -1) arr.push(optIdx);
-        else arr.splice(pos, 1);
-        if (arr.length) selections[globalIdx] = arr;
-        else delete selections[globalIdx];
-      } else {
-        selections[globalIdx] = optIdx;
-      }
-      return { ...prev, selections };
-    });
-  }
-
-  async function saveDrillStat(question, selected) {
-    if (!db || !question?._qid) return;
-    const qid = question._qid;
-    const prev = drillStatCache[qid] || { qid, correct: 0, wrong: 0, total: 0, lastCorrect: false };
-    const ok = isAnswerCorrect(question, selected);
-    const next = {
-      ...prev,
-      total: (prev.total || 0) + 1,
-      correct: (prev.correct || 0) + (ok ? 1 : 0),
-      wrong: (prev.wrong || 0) + (ok ? 0 : 1),
-      lastCorrect: ok,
-      updatedAt: Date.now(),
-    };
-    setDrillStatCache(cache => ({ ...cache, [qid]: next }));
-    await dbPut(db, 'drillStat', next);
-  }
-
-  async function updateWrongBook(question, selected) {
-    if (!db || !question?._qid) return;
-    const ok = isAnswerCorrect(question, selected);
-    if (ok) {
-      setWrongBookCache(cache => {
-        const next = { ...cache };
-        delete next[question._qid];
-        return next;
-      });
-      await dbPut(db, 'wrongBook', { qid: question._qid, isDeleted: true, updatedAt: Date.now() });
-      return;
-    }
-    const prev = wrongBookCache[question._qid];
-    const next = {
-      qid: question._qid,
-      moduleId: question._moduleId,
-      moduleName: question._moduleName,
-      docIdx: question._docIdx,
-      docTitle: question._docTitle,
-      quizIdx: question._quizIdx,
-      question: question.question,
-      type: question.type,
-      userAnswer: selected,
-      correctAnswer: question.answer,
-      explain: question.explain,
-      wrongCount: (prev?.wrongCount || 0) + 1,
-      createdAt: prev?.createdAt || Date.now(),
-      updatedAt: Date.now(),
-    };
-    setWrongBookCache(cache => ({ ...cache, [question._qid]: next }));
-    await dbPut(db, 'wrongBook', next);
-  }
-
-  function submitPage() {
-    const { currentPageIdx, pageSize, questions, type, selections } = quizState;
-    const start = currentPageIdx * pageSize;
-    const end = Math.min(start + pageSize, questions.length);
-    for (let gi = start; gi < end; gi++) {
-      const q = questions[gi];
-      const selected = selections[gi];
-      if (type === 'drill') saveDrillStat(q, selected);
-      if (type !== 'breaker') updateWrongBook(q, selected);
-    }
-    setQuizState(prev => {
-      const answers = { ...prev.answers };
-      let score = prev.score;
-      for (let gi = start; gi < end; gi++) {
-        const q = prev.questions[gi];
-        const selected = prev.selections[gi];
-        answers[gi] = selected;
-        if (isAnswerCorrect(q, selected)) score++;
-      }
-      return {
-        ...prev,
-        answers,
-        score,
-        submittedPages: [...prev.submittedPages, prev.currentPageIdx],
-      };
-    });
-  }
-
-  function nextPage() {
-    setQuizState(prev => {
-      const nextPageIdx = prev.currentPageIdx + 1;
-      return {
-        ...prev,
-        currentPageIdx: nextPageIdx,
-        activeQuestionIdx: nextPageIdx * prev.pageSize
-      };
-    });
-    document.querySelector('.content')?.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  async function showQuizResult() {
-    if (!quizState) return;
-    const total = quizState.questions.length;
-    const pct = Math.round((quizState.score / total) * 100);
-    if (db) {
-      await dbPut(db, 'quizRecord', {
-        moduleId: quizState.moduleId,
-        docIdx: quizState.docIdx,
-        score: quizState.score,
-        total,
-        pct,
-        time: Date.now(),
-      });
-    }
-    await grantPetReward(makeQuizReward(quizState));
-    navigate('/result');
-    setMobileAnswerCardOpen(false);
-  }
-
-  function jumpToQuestion(globalIdx) {
-    flushSync(() => {
-      setQuizState(prev => {
-        const targetPage = Math.floor(globalIdx / prev.pageSize);
-        return { 
-          ...prev, 
-          currentPageIdx: targetPage,
-          activeQuestionIdx: globalIdx
-        };
-      });
-    });
-    const el = document.getElementById(`qq-${globalIdx}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }
 
   const activeNavPage = page === 'quiz' || page === 'result'
     ? (quizState?.type === 'wrongbook' ? 'wrongbook' : quizState?.type === 'drill' ? 'drill' : quizState?.type === 'breaker' ? 'breaker' : 'learn')
@@ -984,83 +437,26 @@ function App() {
           </button>
         </div>
       )}
-      {/* ===== 顶部导航栏：三区布局 [Logo | Tabs | Actions] ===== */}
-      <nav data-component="top-nav" className="sticky top-0 z-[100] h-14 bg-surface border-b border-border flex items-center">
 
-        {/* 左区：Logo */}
-        <div data-element="logo" className="shrink-0 flex items-center gap-2 pl-4 md:pl-6 pr-3 md:pr-4">
-          <div className="relative flex items-center justify-center cursor-pointer select-none" onClick={handleLogoPractise}>
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-8 h-8 object-contain" ref={logoImgRef} />
-            {flyEffects.map(effect => (
-              <span key={effect.id} className="logo-fly-text">{effect.text}</span>
-            ))}
-          </div>
-          <span className="hidden sm:block text-[15px] font-bold text-primary whitespace-nowrap">中高级前端知识对齐</span>
-        </div>
-
-        {/* 分隔线 */}
-        <div className="shrink-0 w-px h-5 bg-border" />
-
-        {/* 中区：导航 Tabs（弹性伸缩，内部可横向滚动） */}
-        <div data-element="nav-tabs" className="flex-1 min-w-0 overflow-x-auto scrollbar-none flex items-center gap-1 px-2 md:px-3">
-          {PAGES.map(name => (
-            <button
-              key={name}
-              data-element="nav-tab"
-              data-state={activeNavPage === name ? 'active' : 'inactive'}
-              className={`shrink-0 px-3 py-1.5 rounded-lg cursor-pointer text-[13px] md:text-[14px] whitespace-nowrap transition-all duration-200 border-0 font-medium
-                ${activeNavPage === name
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-transparent text-text-secondary hover:bg-surface-alt hover:text-text'
-                }`}
-              onClick={() => setRoute(name)}
-            >
-              {name === 'home'
-                ? '首页'
-                : name === 'roadmap'
-                  ? '🧭 路线'
-                  : name === 'breaker'
-                    ? '🗺️ 破冰'
-                    : name === 'learn'
-                      ? '📖 学习'
-                      : name === 'drill'
-                        ? '🎯 刷题'
-                        : '🧩 错题本'}
-            </button>
-          ))}
-        </div>
-
-        <div data-element="actions" className="shrink-0 flex items-center gap-1.5 pr-4 md:pr-6 pl-2">
-          {isAdmin && (
-            <button
-              className={`w-9 h-9 flex items-center justify-center rounded-lg border cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary ${
-                localStorage.getItem('github_pat') ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-surface-alt border-border'
-              }`}
-              onClick={() => setGithubModalOpen(true)}
-              title={localStorage.getItem('github_pat') ? '已配置私有库 (点击管理)' : '未配置私有库 (点击绑定)'}
-            >
-              🔒
-            </button>
-          )}
-          <PetWidget petState={petState} onOpen={() => setPetPanelOpen(true)} />
-          <button
-            className={`w-9 h-9 flex items-center justify-center rounded-lg border cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary ${
-              user ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-surface-alt border-border'
-            }`}
-            onClick={() => setSyncModalOpen(true)}
-            title={user ? `云同步已连接: ${user.email} (点击管理)` : '云同步未连接 (点击登录)'}
-          >
-            {user ? '☁️' : '🔄'}
-          </button>
-          <button
-            className="w-9 h-9 flex items-center justify-center rounded-lg border border-border bg-surface-alt text-[16px] cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary"
-            onClick={toggleTheme}
-            title="切换白天/夜间模式"
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
-        </div>
-      </nav>
+      <Navbar 
+        page={activeNavPage}
+        setRoute={setRoute}
+        isAdmin={isAdmin}
+        user={user}
+        setUser={setUser}
+        petState={petState}
+        db={db}
+        reloadLocalCaches={reloadLocalCaches}
+        loadPrivateModule={loadPrivateModule}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        syncModalOpen={syncModalOpen}
+        setSyncModalOpen={setSyncModalOpen}
+        showSyncPrompt={showSyncPrompt}
+        handleDismissSyncPrompt={handleDismissSyncPrompt}
+        handleAcceptSyncPrompt={handleAcceptSyncPrompt}
+        setPetPanelOpen={setPetPanelOpen}
+      />
 
       <div className={`flex-1 flex overflow-hidden ${immersiveMode ? 'h-screen h-[100dvh]' : 'h-[calc(100vh-56px)] h-[calc(100dvh-56px)]'} relative`}>
         {page === 'learn' && currentModule && (
@@ -1071,99 +467,111 @@ function App() {
             onNavToDoc={navToDoc}
           />
         )}
-        <main data-element="main-content" className={`content flex-1 overflow-y-auto ${page === 'breaker' && !currentBreakerNodeId ? 'p-0 overflow-hidden' : 'p-8 pb-14 px-12 max-md:p-4 max-md:px-5 max-md:pb-20'}`} ref={contentRef}>
-          {page === 'home' && (
-            <Home
-              progressCache={progressCache}
-              petState={petState}
-              onOpenPet={() => setPetPanelOpen(true)}
-              onOpenRoadmap={() => setRoute('roadmap')}
-              onOpenBreaker={() => setRoute('breaker')}
-              onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })}
-            />
-          )}
-          {page === 'roadmap' && (
-            <CapabilityRoadmap
-              progressCache={progressCache}
-              wrongBookCache={wrongBookCache}
-              onOpenBreaker={() => setRoute('breaker')}
-              onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })}
-              onOpenDoc={navToDoc}
-              onOpenDrill={(moduleId) => {
-                if (moduleId) startDrill(moduleId);
-                else setRoute('drill');
-              }}
-              onOpenWrongBook={(moduleId) => {
-                if (moduleId) startWrongBook(moduleId);
-                else setRoute('wrongbook');
-              }}
-            />
-          )}
-          {page === 'breaker' && !currentBreakerNodeId && (
-            <TechBreakerMap
-              onOpenCard={(nodeId) => setRoute('breaker', { nodeId })}
-            />
-          )}
-          {page === 'breaker' && currentBreakerNodeId && (
-            <TechBreakerCard
-              nodeId={currentBreakerNodeId}
-              onBack={() => setRoute('breaker')}
-              onHome={() => setRoute('home')}
-              onStartQuiz={startBreakerQuiz}
-            />
-          )}
-          {page === 'learn' && !currentModule && <ModuleSelect progressCache={progressCache} onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })} />}
-          {page === 'learn' && currentModule && (
-            <Article
-              module={currentModule}
-              docIdx={currentDocIdx}
-              progressCache={progressCache}
-              onHome={() => setRoute('home')}
-              onModuleHome={() => setRoute('learn', { moduleId: currentModule.id, docIdx: 0 })}
-              onNavToDoc={navToDoc}
-              onMarkDone={markDone}
-              onStartQuiz={startDocQuiz}
-              onGoDrill={() => setRoute('drill')}
-              immersiveMode={immersiveMode}
-              onToggleImmersive={() => setImmersiveMode(v => !v)}
-            />
-          )}
-          {page === 'drill' && <DrillSelect modules={LEARNING_CONTENT.modules} drillStatCache={drillStatCache} onStartDrill={startDrill} />}
-          {page === 'wrongbook' && (
-            <WrongBookPage
-              wrongBookCache={wrongBookCache}
-              onStartWrongBook={startWrongBook}
-              onReadChapter={navToDoc}
-            />
-          )}
-          {page === 'quiz' && quizState && (
-            <QuizPage
-              quizState={quizState}
-              onToggleOption={toggleOption}
-              onSubmitPage={submitPage}
-              onNextPage={nextPage}
-              onShowResult={showQuizResult}
-              onReadChapter={navToDoc}
-              immersiveMode={immersiveMode}
-              onToggleImmersive={() => setImmersiveMode(v => !v)}
-              onJumpToQuestion={jumpToQuestion}
-            />
-          )}
-          {page === 'result' && quizState && (
-            <QuizResult
-              quizState={quizState}
-              onStartDocQuiz={startDocQuiz}
-              onNextDoc={navToDoc}
-              onBackModule={() => setRoute('learn', { moduleId: quizState.moduleId, docIdx: 0 })}
-              onBackDrill={() => setRoute('drill')}
-              onStartDrill={startDrill}
-              onBackWrongBook={() => setRoute('wrongbook')}
-              onStartWrongBook={startWrongBook}
-              onBackBreaker={() => setRoute('breaker', { nodeId: quizState.moduleId })}
-              onStartBreakerQuiz={startBreakerQuiz}
-            />
-          )}
-        </main>
+        <div className="flex-1 relative overflow-hidden h-full flex flex-col">
+          {/* 自动定位滚动的毛玻璃遮罩 */}
+          <div 
+            className="pointer-events-none absolute inset-0 z-40 scroll-blur-overlay opacity-0"
+            ref={scrollBlurOverlayRef}
+          />
+          <main 
+            data-element="main-content" 
+            className={`content flex-1 overflow-y-auto ${page === 'breaker' && !currentBreakerNodeId ? 'p-0 overflow-hidden' : 'p-8 pb-14 px-12 max-md:p-4 max-md:px-5 max-md:pb-20'}`} 
+            ref={contentRef}
+          >
+            {page === 'home' && (
+              <Home
+                progressCache={progressCache}
+                petState={petState}
+                onOpenPet={() => setPetPanelOpen(true)}
+                onOpenRoadmap={() => setRoute('roadmap')}
+                onOpenBreaker={() => setRoute('breaker')}
+                onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })}
+              />
+            )}
+            {page === 'roadmap' && (
+              <CapabilityRoadmap
+                progressCache={progressCache}
+                wrongBookCache={wrongBookCache}
+                onOpenBreaker={() => setRoute('breaker')}
+                onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })}
+                onOpenDoc={navToDoc}
+                onOpenDrill={(moduleId) => {
+                  if (moduleId) startDrill(moduleId);
+                  else setRoute('drill');
+                }}
+                onOpenWrongBook={(moduleId) => {
+                  if (moduleId) startWrongBook(moduleId);
+                  else setRoute('wrongbook');
+                }}
+              />
+            )}
+            {page === 'breaker' && !currentBreakerNodeId && (
+              <TechBreakerMap
+                onOpenCard={(nodeId) => setRoute('breaker', { nodeId })}
+              />
+            )}
+            {page === 'breaker' && currentBreakerNodeId && (
+              <TechBreakerCard
+                nodeId={currentBreakerNodeId}
+                onBack={() => setRoute('breaker')}
+                onHome={() => setRoute('home')}
+                onStartQuiz={startBreakerQuiz}
+              />
+            )}
+            {page === 'learn' && !currentModule && <ModuleSelect progressCache={progressCache} onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })} />}
+            {page === 'learn' && currentModule && (
+              <Article
+                module={currentModule}
+                docIdx={currentDocIdx}
+                progressCache={progressCache}
+                onHome={() => setRoute('home')}
+                onModuleHome={() => setRoute('learn', { moduleId: currentModule.id, docIdx: 0 })}
+                onNavToDoc={navToDoc}
+                onMarkDone={markDone}
+                onStartQuiz={startDocQuiz}
+                onGoDrill={() => setRoute('drill')}
+                immersiveMode={immersiveMode}
+                onToggleImmersive={() => setImmersiveMode(v => !v)}
+                customScrollTo={customScrollTo}
+              />
+            )}
+            {page === 'drill' && <DrillSelect modules={LEARNING_CONTENT.modules} drillStatCache={drillStatCache} onStartDrill={startDrill} />}
+            {page === 'wrongbook' && (
+              <WrongBookPage
+                wrongBookCache={wrongBookCache}
+                onStartWrongBook={startWrongBook}
+                onReadChapter={navToDoc}
+              />
+            )}
+            {page === 'quiz' && quizState && (
+              <QuizPage
+                quizState={quizState}
+                onToggleOption={toggleOption}
+                onSubmitPage={submitPage}
+                onNextPage={nextPage}
+                onShowResult={showQuizResult}
+                onReadChapter={navToDoc}
+                immersiveMode={immersiveMode}
+                onToggleImmersive={() => setImmersiveMode(v => !v)}
+                onJumpToQuestion={jumpToQuestion}
+              />
+            )}
+            {page === 'result' && quizState && (
+              <QuizResult
+                quizState={quizState}
+                onStartDocQuiz={startDocQuiz}
+                onNextDoc={navToDoc}
+                onBackModule={() => setRoute('learn', { moduleId: quizState.moduleId, docIdx: 0 })}
+                onBackDrill={() => setRoute('drill')}
+                onStartDrill={startDrill}
+                onBackWrongBook={() => setRoute('wrongbook')}
+                onStartWrongBook={startWrongBook}
+                onBackBreaker={() => setRoute('breaker', { nodeId: quizState.moduleId })}
+                onStartBreakerQuiz={startBreakerQuiz}
+              />
+            )}
+          </main>
+        </div>
         {page === 'quiz' && quizState && (
           <AnswerCard
             quizState={quizState}
@@ -1185,25 +593,6 @@ function App() {
           onClose={() => setPetPanelOpen(false)}
         />
       )}
-      <SyncModal
-        isOpen={syncModalOpen}
-        onClose={() => setSyncModalOpen(false)}
-        db={db}
-        user={user}
-        onSyncComplete={reloadLocalCaches}
-        onAuthChange={setUser}
-      />
-      {showSyncPrompt && (
-        <SyncPromptCard
-          onOpenSync={handleAcceptSyncPrompt}
-          onClose={handleDismissSyncPrompt}
-        />
-      )}
-      <PrivateResources
-        isOpen={githubModalOpen}
-        onClose={() => setGithubModalOpen(false)}
-        onSaveSuccess={loadPrivateModule}
-      />
     </>
   );
 }

@@ -13,7 +13,7 @@ export function PrivateResources({ isOpen, onClose, onSaveSuccess }) {
   useEffect(() => {
     if (isOpen) {
       setPat(localStorage.getItem('github_pat') || '');
-      setRepo(localStorage.getItem('github_repo') || 'Aoyia/frontend-learning-system');
+      setRepo(localStorage.getItem('github_repo') || 'Aoyia/my-private-interview-docs');
       setBranch(localStorage.getItem('github_branch') || 'main');
       setTestError('');
       setTestSuccess(false);

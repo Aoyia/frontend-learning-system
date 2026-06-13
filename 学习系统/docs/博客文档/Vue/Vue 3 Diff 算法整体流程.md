@@ -131,7 +131,7 @@ function render(_ctx, _cache) {
 }
 ```
 
-#### 1.3 事件侦听器缓存
+#### 1.3 Event Cache
 
 Vue 3 会缓存内联事件处理函数，避免不必要的重新创建：
 

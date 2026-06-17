@@ -7,8 +7,5 @@
     "dev": "pnpm -C 学习系统 dev",
     "build": "pnpm -C 学习系统 build",
     "build:ui": "pnpm -C packages/yuan-ui build"
-  },
-  "dependencies": {
-    "uipro-cli-zh": "^2.5.0"
   }
 }

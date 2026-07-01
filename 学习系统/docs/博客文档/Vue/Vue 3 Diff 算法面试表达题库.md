@@ -32,9 +32,12 @@ updated: 2026-06-13
 
 ---
 
+## 面试题自测
+
 ## 一、破冰级（面试必答，不会直接减分）
 
-### Q1：Vue 3 的 Diff 算法相比 Vue 2 做了哪些优化？
+### Q1 [expression]
+Vue 3 的 Diff 算法相比 Vue 2 做了哪些优化？
 
 > **适用场景**：面试开场「介绍一下 Vue 3 和 Vue 2 的区别」、「Vue 3 性能优化做了哪些」时必提。
 
@@ -60,7 +63,8 @@ updated: 2026-06-13
 
 ---
 
-### Q2：PatchFlag 是什么？它怎么工作？
+### Q2 [expression]
+PatchFlag 是什么？它怎么工作？
 
 > **适用场景**：「Vue 3 编译优化有了解吗」「PatchFlag 听说过吗」
 
@@ -82,7 +86,8 @@ updated: 2026-06-13
 
 ---
 
-### Q3：什么是 Block Tree？它解决了什么问题？
+### Q3 [expression]
+什么是 Block Tree？它解决了什么问题？
 
 > **适用场景**：追问 Diff 原理时最常被深挖的点。
 
@@ -106,7 +111,8 @@ updated: 2026-06-13
 
 ## 二、进阶级（展示理解深度）
 
-### Q4：Vue 3 的快速 Diff 算法（patchKeyedChildren）是什么流程？
+### Q4 [expression]
+Vue 3 的快速 Diff 算法（patchKeyedChildren）是什么流程？
 
 > **适用场景**：「讲一下 v-for 列表的 diff 流程」「Vue 3 如何处理乱序列表」
 
@@ -135,7 +141,8 @@ updated: 2026-06-13
 
 ---
 
-### Q5：为什么说"首次渲染时静态节点会被访问，但更新时不会"？
+### Q5 [expression]
+为什么说"首次渲染时静态节点会被访问，但更新时不会"？
 
 > **适用场景**：追问 Block Tree 细节时，体现你真正理解了设计取舍。
 
@@ -153,7 +160,8 @@ updated: 2026-06-13
 
 ---
 
-### Q6：LIS（最长递增子序列）在 Diff 里具体如何减少 DOM 操作？
+### Q6 [expression]
+LIS（最长递增子序列）在 Diff 里具体如何减少 DOM 操作？
 
 > **适用场景**：「为什么 Vue 3 列表 diff 比 Vue 2 快」「LIS 算法在这里怎么用的」
 
@@ -179,7 +187,8 @@ updated: 2026-06-13
 
 ## 三、高阶级（体现架构级思考）
 
-### Q7：Block Tree 在哪些情况下会"退出优化"（bail out）？
+### Q7 [expression]
+Block Tree 在哪些情况下会"退出优化"（bail out）？
 
 > **适用场景**：考察你对 Block Tree 边界的理解，通常在深聊源码时出现。
 
@@ -203,7 +212,8 @@ updated: 2026-06-13
 
 ---
 
-### Q8：Vue 3 和 React Fiber 在 Diff 思路上有什么本质差异？
+### Q8 [expression]
+Vue 3 和 React Fiber 在 Diff 思路上有什么本质差异？
 
 > **适用场景**：大厂 SR / P7 面试常问的横向对比题，展示技术格局。
 
@@ -221,7 +231,8 @@ updated: 2026-06-13
 
 ---
 
-### Q9：在极端场景下，Vue 3 的 Block Tree 优化会失效吗？
+### Q9 [expression]
+在极端场景下，Vue 3 的 Block Tree 优化会失效吗？
 
 > **适用场景**：体现你对技术权衡的理解，接近架构师思维。
 

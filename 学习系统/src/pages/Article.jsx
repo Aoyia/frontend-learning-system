@@ -4,10 +4,25 @@ import { renderMarkdownWithHeadings } from '../utils/markdown.js';
 import { getDifficultyClass, sourceTypeLabel } from '../utils/quiz.js';
 import { ArticleToc } from '../components/ArticleToc.jsx';
 
-export function Article({ module, docIdx, progressCache, onHome, onModuleHome, onNavToDoc, onMarkDone, onStartQuiz, onGoDrill, immersiveMode, onToggleImmersive, customScrollTo }) {
+export function Article({ 
+  module, 
+  docIdx, 
+  progressCache, 
+  onHome, 
+  onModuleHome, 
+  onNavToDoc, 
+  onMarkDone, 
+  onStartQuiz, 
+  onStartOralDrill,
+  onGoDrill, 
+  immersiveMode, 
+  onToggleImmersive, 
+  customScrollTo 
+}) {
   const doc = module.docs[docIdx];
   const location = useLocation();
   const navigate = useNavigate();
+  const hasExpression = useMemo(() => (doc.quiz || []).some(q => q.type === 'expression'), [doc]);
 
   useEffect(() => {
     if (!doc || !location.hash) return;
@@ -97,10 +112,19 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
         <div data-element="article-body" className="md-body" dangerouslySetInnerHTML={{ __html: rendered.html }} />
 
         {!isDone && (
-          <div data-element="read-actions" className="mt-6 p-4 px-5 bg-success-light border border-success/30 rounded-xl flex items-center justify-between gap-4">
+          <div data-element="read-actions" className="mt-6 p-4 px-5 bg-success-light border border-success/30 rounded-xl flex items-center justify-between gap-4 flex-wrap">
             <div className="text-[14px] text-success font-semibold">📖 读完了吗？标记为已读，并做随堂作业</div>
-            <div className="flex gap-2.5">
+            <div className="flex gap-2.5 flex-wrap">
               <button className="px-5 py-2 rounded-lg border border-border bg-transparent text-text cursor-pointer text-[14px] font-semibold transition-all duration-200 hover:border-primary hover:text-primary" onClick={() => onMarkDone(module.id, docIdx, false)}>仅标记已读</button>
+              {hasExpression && (
+                <button 
+                  className="px-5 py-2 rounded-lg border-0 cursor-pointer text-[14px] font-bold transition-all duration-200 text-white hover:brightness-110 active:scale-95" 
+                  style={{ background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)' }}
+                  onClick={() => { onMarkDone(module.id, docIdx, false); onStartOralDrill(module.id, docIdx); }}
+                >
+                  🔮 开始口试演练
+                </button>
+              )}
               <button className="px-5 py-2 rounded-lg border-0 cursor-pointer text-[14px] font-semibold transition-all duration-200 bg-primary text-white hover:bg-primary-hover" onClick={() => onMarkDone(module.id, docIdx, true)}>已读 + 开始作业</button>
             </div>
           </div>
@@ -108,7 +132,16 @@ export function Article({ module, docIdx, progressCache, onHome, onModuleHome, o
 
         {isDone && (
           <div data-element="read-actions" className="mt-6 flex gap-2.5 flex-wrap">
-            <button className="px-5 py-2 rounded-lg border-0 cursor-pointer text-[14px] font-semibold transition-all duration-200 bg-primary text-white hover:bg-primary-hover" onClick={() => onStartQuiz(module.id, docIdx)}>做随堂作业</button>
+            {hasExpression && (
+              <button 
+                className="px-5 py-2 rounded-lg border-0 cursor-pointer text-[14px] font-bold transition-all duration-200 text-white hover:brightness-110 active:scale-95" 
+                style={{ background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)' }}
+                onClick={() => onStartOralDrill(module.id, docIdx)}
+              >
+                🔮 开始口试表达演练
+              </button>
+            )}
+            <button className="px-5 py-2 rounded-lg border border-border bg-transparent text-text cursor-pointer text-[14px] font-semibold transition-all duration-200 hover:border-primary hover:text-primary" onClick={() => onStartQuiz(module.id, docIdx)}>做随堂作业</button>
             <button className="px-5 py-2 rounded-lg border border-border bg-transparent text-text cursor-pointer text-[14px] font-semibold transition-all duration-200 hover:border-primary hover:text-primary" onClick={onGoDrill}>去模块刷题</button>
           </div>
         )}

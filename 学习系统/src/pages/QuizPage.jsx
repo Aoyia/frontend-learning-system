@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { QuestionBlock } from '../components/QuestionBlock.jsx';
 import { isAnswerCorrect } from '../utils/quiz.js';
+import { OralDrillPanel } from '../components/OralDrillPanel.jsx';
 
 export function QuizPage({ 
   quizState, 
@@ -13,6 +14,21 @@ export function QuizPage({
   onToggleImmersive,
   onJumpToQuestion 
 }) {
+  if (quizState?.type === 'expression') {
+    return (
+      <div className="w-full max-w-[1200px] mx-auto px-4 md:px-6 py-4">
+        <OralDrillPanel
+          quizState={quizState}
+          onToggleOption={onToggleOption}
+          onSubmitPage={onSubmitPage}
+          onNextPage={onNextPage}
+          onShowResult={onShowResult}
+          onJumpToQuestion={onJumpToQuestion}
+        />
+      </div>
+    );
+  }
+
   const totalQ = quizState.questions.length;
   const totalPages = Math.ceil(totalQ / quizState.pageSize);
   const start = quizState.currentPageIdx * quizState.pageSize;

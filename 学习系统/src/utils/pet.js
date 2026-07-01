@@ -93,6 +93,7 @@ export function makeQuizReward(quizState) {
     drill: { base: 20, perCorrect: 3, title: '实战历练' },
     wrongbook: { base: 35, perCorrect: 5, title: '斩心魔' },
     breaker: { base: 12, perCorrect: 2, title: '破冰试炼' },
+    expression: { base: 25, perCorrect: 4, title: '口舌之辩' },
   };
   const rule = typeMap[quizState.type] || typeMap.doc;
   const perfectBonus = isPerfect ? 20 : 0;

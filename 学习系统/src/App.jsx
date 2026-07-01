@@ -11,6 +11,7 @@ import { ModuleSelect } from './pages/ModuleSelect.jsx';
 import { Article } from './pages/Article.jsx';
 import { DrillSelect } from './pages/DrillSelect.jsx';
 import { WrongBookPage } from './pages/WrongBookPage.jsx';
+import { MockInterviewPage } from './pages/MockInterviewPage.jsx';
 import { QuizPage } from './pages/QuizPage.jsx';
 import { QuizResult } from './pages/QuizResult.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -244,6 +245,8 @@ function App() {
     mobileAnswerCardOpen,
     setMobileAnswerCardOpen,
     startDocQuiz,
+    startDocOralDrill,
+    startModuleOralDrill,
     startBreakerQuiz,
     startDrill,
     startWrongBook,
@@ -306,6 +309,7 @@ function App() {
     if (nextPage === 'learn') navigate(opts.moduleId ? `/learn/${opts.moduleId}/${opts.docIdx ?? 0}` : '/learn');
     if (nextPage === 'drill') navigate('/drill');
     if (nextPage === 'wrongbook') navigate('/wrongbook');
+    if (nextPage === 'mock-interview') navigate('/mock-interview');
   }, [navigate]);
 
   const navToDoc = useCallback((moduleId, docIdx) => {
@@ -382,6 +386,11 @@ function App() {
       setMobileAnswerCardOpen(false);
       return;
     }
+    if (parts[0] === 'mock-interview') {
+      setPage('mock-interview');
+      setMobileAnswerCardOpen(false);
+      return;
+    }
     if (parts[0] === 'quiz') {
       setPage('quiz');
       setMobileAnswerCardOpen(false);
@@ -438,25 +447,28 @@ function App() {
         </div>
       )}
 
-      <Navbar 
-        page={activeNavPage}
-        setRoute={setRoute}
-        isAdmin={isAdmin}
-        user={user}
-        setUser={setUser}
-        petState={petState}
-        db={db}
-        reloadLocalCaches={reloadLocalCaches}
-        loadPrivateModule={loadPrivateModule}
-        theme={theme}
-        toggleTheme={toggleTheme}
-        syncModalOpen={syncModalOpen}
-        setSyncModalOpen={setSyncModalOpen}
-        showSyncPrompt={showSyncPrompt}
-        handleDismissSyncPrompt={handleDismissSyncPrompt}
-        handleAcceptSyncPrompt={handleAcceptSyncPrompt}
-        setPetPanelOpen={setPetPanelOpen}
-      />
+      <div className={`transition-all duration-300 ease-in-out origin-top ${immersiveMode ? 'h-0 overflow-hidden -translate-y-full opacity-0' : 'h-14 opacity-100 translate-y-0'}`}>
+        <Navbar 
+          page={activeNavPage}
+          setRoute={setRoute}
+          isAdmin={isAdmin}
+          user={user}
+          setUser={setUser}
+          petState={petState}
+          db={db}
+          reloadLocalCaches={reloadLocalCaches}
+          loadPrivateModule={loadPrivateModule}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          syncModalOpen={syncModalOpen}
+          setSyncModalOpen={setSyncModalOpen}
+          showSyncPrompt={showSyncPrompt}
+          handleDismissSyncPrompt={handleDismissSyncPrompt}
+          handleAcceptSyncPrompt={handleAcceptSyncPrompt}
+          setPetPanelOpen={setPetPanelOpen}
+          onToggleImmersive={setImmersiveMode}
+        />
+      </div>
 
       <div className={`flex-1 flex overflow-hidden ${immersiveMode ? 'h-screen h-[100dvh]' : 'h-[calc(100vh-56px)] h-[calc(100dvh-56px)]'} relative`}>
         {page === 'learn' && currentModule && (
@@ -486,6 +498,7 @@ function App() {
                 onOpenRoadmap={() => setRoute('roadmap')}
                 onOpenBreaker={() => setRoute('breaker')}
                 onOpenModule={(moduleId) => setRoute('learn', { moduleId, docIdx: 0 })}
+                onOpenMockInterview={() => setRoute('mock-interview')}
               />
             )}
             {page === 'roadmap' && (
@@ -529,18 +542,63 @@ function App() {
                 onNavToDoc={navToDoc}
                 onMarkDone={markDone}
                 onStartQuiz={startDocQuiz}
+                onStartOralDrill={startDocOralDrill}
                 onGoDrill={() => setRoute('drill')}
                 immersiveMode={immersiveMode}
                 onToggleImmersive={() => setImmersiveMode(v => !v)}
                 customScrollTo={customScrollTo}
               />
             )}
-            {page === 'drill' && <DrillSelect modules={LEARNING_CONTENT.modules} drillStatCache={drillStatCache} onStartDrill={startDrill} />}
+            {page === 'drill' && (
+              <DrillSelect 
+                modules={LEARNING_CONTENT.modules} 
+                drillStatCache={drillStatCache} 
+                onStartDrill={startDrill} 
+                onStartOralDrill={startModuleOralDrill} 
+              />
+            )}
             {page === 'wrongbook' && (
               <WrongBookPage
                 wrongBookCache={wrongBookCache}
                 onStartWrongBook={startWrongBook}
                 onReadChapter={navToDoc}
+              />
+            )}
+            {page === 'mock-interview' && (
+              <MockInterviewPage
+                wrongBookCache={wrongBookCache}
+                onAddToWrongBook={async (question, userWrittenText, score, clear = false) => {
+                  if (!db || !question?._qid) return;
+                  if (clear) {
+                    setWrongBookCache(cache => {
+                      const next = { ...cache };
+                      delete next[question._qid];
+                      return next;
+                    });
+                    await dbPut(db, 'wrongBook', { qid: question._qid, isDeleted: true, updatedAt: Date.now() });
+                    return;
+                  }
+                  const prev = wrongBookCache[question._qid];
+                  const next = {
+                    qid: question._qid,
+                    moduleId: question._moduleId || 'project-prep-special',
+                    moduleName: question._moduleName || '项目面试准备',
+                    docIdx: question._docIdx || 0,
+                    docTitle: question._docTitle || '面试复盘报告',
+                    quizIdx: question._quizIdx || 0,
+                    question: question.question,
+                    type: question.type,
+                    userAnswer: { writtenText: userWrittenText, score },
+                    correctAnswer: question.keywords || [],
+                    explain: question.recommendStructure || '',
+                    wrongCount: (prev?.wrongCount || 0) + 1,
+                    createdAt: prev?.createdAt || Date.now(),
+                    updatedAt: Date.now(),
+                  };
+                  setWrongBookCache(cache => ({ ...cache, [question._qid]: next }));
+                  await dbPut(db, 'wrongBook', next);
+                }}
+                onNavToWrongBook={() => setRoute('wrongbook')}
               />
             )}
             {page === 'quiz' && quizState && (

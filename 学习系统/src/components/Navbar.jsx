@@ -4,7 +4,7 @@ import { SyncModal } from './SyncModal.jsx';
 import { SyncPromptCard } from './SyncPromptCard.jsx';
 import { PrivateResources } from '../pages/PrivateResources.jsx';
 
-const PAGES = ['home', 'roadmap', 'breaker', 'learn', 'drill', 'wrongbook'];
+const PAGES = ['home', 'roadmap', 'breaker', 'learn', 'drill', 'wrongbook', 'mock-interview'];
 
 const CULTIVATION_MEMES = [
   '参天造化露 +1',
@@ -37,6 +37,7 @@ export default function Navbar({
   handleDismissSyncPrompt,
   handleAcceptSyncPrompt,
   setPetPanelOpen,
+  onToggleImmersive,
 }) {
   const logoImgRef = useRef(null);
   const logoSpeedRef = useRef(0);
@@ -159,8 +160,10 @@ export default function Navbar({
                     : name === 'learn'
                       ? '📖 学习'
                       : name === 'drill'
-                        ? '🎯 刷题'
-                        : '🧩 错题本'}
+                        ? '🎯 刷题与口试'
+                        : name === 'wrongbook'
+                          ? '🧩 错题本'
+                          : '🎙️ 模拟面试'}
             </button>
           ))}
         </div>
@@ -195,6 +198,15 @@ export default function Navbar({
           >
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
+          {onToggleImmersive && (
+            <button
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-border bg-surface-alt text-[13px] cursor-pointer transition-all duration-200 hover:border-primary hover:bg-surface hover:text-primary"
+              onClick={() => onToggleImmersive(true)}
+              title="收起顶部栏 (按 Esc 键或鼠标滑至右上角恢复)"
+            >
+              ▲
+            </button>
+          )}
         </div>
       </nav>
 

@@ -32,7 +32,7 @@ export function useImmersiveController(page) {
   useEffect(() => {
     if (page === 'quiz') {
       setImmersiveMode(true);
-    } else if (page !== 'learn') {
+    } else if (page !== 'learn' && page !== 'mock-interview') {
       setImmersiveMode(false);
     }
   }, [page]);

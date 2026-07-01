@@ -9,12 +9,16 @@ export const QUESTION_TYPE_ORDER = {
   single: 0,
   multiple: 1,
   judgment: 2,
+  expression: 3,
 };
 
 export const QUICK_DRILL_LIMIT = 10;
 export const DEFAULT_DRILL_LIMIT = 20;
 
 export function isAnswerCorrect(question, selected) {
+  if (question.type === 'expression') {
+    return !!selected?.isCorrect;
+  }
   if (Array.isArray(question.answer)) {
     return Array.isArray(selected)
       && selected.length === question.answer.length
@@ -38,6 +42,7 @@ export function withQuestionSource(module, doc, docIdx, question, quizIdx) {
     _docIdx: docIdx,
     _docTitle: doc.title,
     _quizIdx: quizIdx,
+    _tags: doc.tags || [],
   };
 }
 
@@ -147,7 +152,7 @@ export function createQuizState(type, moduleId, docIdx, questions) {
     moduleId,
     docIdx,
     questions,
-    pageSize: 5,
+    pageSize: type === 'expression' ? 1 : 5,
     currentPageIdx: 0,
     activeQuestionIdx: 0,
     selections: {},

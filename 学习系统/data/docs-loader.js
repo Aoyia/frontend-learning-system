@@ -148,7 +148,9 @@ function parseDocsQuiz(markdown) {
     const type = rawType
       .replace('单选', 'single')
       .replace('多选', 'multiple')
-      .replace('判断', 'judgment');
+      .replace('判断', 'judgment')
+      .replace('表达', 'expression')
+      .replace('oral', 'expression');
 
     const explainMatch = block.match(/解析[：:]/);
     const explainIdx = explainMatch ? explainMatch.index : -1;
@@ -157,6 +159,78 @@ function parseDocsQuiz(markdown) {
     const explain = hasExplain ? block.slice(explainIdx + explainMatch[0].length).trim() : '';
 
     const lines = blockBeforeExplain.split('\n').map(l => l.trim()).filter(Boolean);
+
+    if (type === 'expression') {
+      // 提取适用场景
+      let scene = '';
+      const sceneMatch = block.match(/>\s*[\*\_]*适用场景[：:]\s*[\*\_]*(.*)/);
+      if (sceneMatch) {
+        scene = sceneMatch[1].trim();
+      }
+
+      // 提取推荐表达结构
+      let recommendStructure = '';
+      const recMatch = block.match(/(?:\*\*推荐表达结构\*\*|\*\*推荐表达\*\*)[：:]?\s*\n([\s\S]*?)(?=\n\*\*|$)/);
+      if (recMatch) {
+        recommendStructure = recMatch[1].split('\n').map(l => l.trim().replace(/^>\s?/, '')).join('\n').trim();
+      } else {
+        const quoteLines = lines.filter(l => l.startsWith('>') && !l.includes('适用场景'));
+        recommendStructure = quoteLines.map(l => l.replace(/^>\s?/, '')).join('\n').trim();
+      }
+
+      // 提取核心关键词锚点
+      let keywords = [];
+      const kwMatch = block.match(/(?:\*\*关键词锚点\*\*|\*\*关键词\*\*)[：:]?\s*\n([\s\S]*?)(?=\n\*\*|$)/);
+      if (kwMatch) {
+        const kwText = kwMatch[1];
+        const rawKws = kwText.match(/`([^`]+)`/g);
+        if (rawKws) {
+          keywords = rawKws.map(w => w.slice(1, -1));
+        }
+      }
+
+      // 提取大厂追问问题
+      let followupQuestion = '';
+      const fuMatch = block.match(/(?:\*\*大厂追问\*\*|\*\*深度追问\*\*)[：:]?\s*(.*)/);
+      if (fuMatch) {
+        followupQuestion = fuMatch[1].trim().replace(/^>\s?/, '');
+      }
+
+      // 提取追问解答话术
+      let followupAnswer = '';
+      const fuaMatch = block.match(/(?:\*\*追问话术\*\*|\*\*追问解答\*\*|\*\*追问推荐表达\*\*)[：:]?\s*\n([\s\S]*?)(?=\n\*\*|$)/);
+      if (fuaMatch) {
+        followupAnswer = fuaMatch[1].split('\n').map(l => l.trim().replace(/^>\s?/, '')).join('\n').trim();
+      }
+
+      // 提取追问核心关键词
+      let followupKeywords = [];
+      const fukwMatch = block.match(/(?:\*\*追问关键词\*\*|\*\*追问关键词锚点\*\*)[：:]?\s*\n([\s\S]*?)(?=\n\*\*|$)/);
+      if (fukwMatch) {
+        const fukwText = fukwMatch[1];
+        const rawFukws = fukwText.match(/`([^`]+)`/g);
+        if (rawFukws) {
+          followupKeywords = rawFukws.map(w => w.slice(1, -1));
+        }
+      }
+
+      // 提取题干 (通常是 block 的第一行)
+      const firstLine = lines[0] || '';
+      const question = firstLine.replace(/^Q\d+[：:]?\s*/, '').trim();
+
+      return {
+        type: 'expression',
+        question,
+        scene,
+        recommendStructure,
+        keywords,
+        followupQuestion,
+        followupAnswer,
+        followupKeywords,
+        explain: explain || recommendStructure, // 复用 explain 字段防止部分原逻辑报错
+      };
+    }
+
     const answerLine = lines.find(l => /^答案[：:]/.test(l));
     const answerStr = answerLine?.replace(/^答案[：:]/, '').trim() || '';
     const questionAndOptions = lines.filter(l => !/^答案[：:]/.test(l));

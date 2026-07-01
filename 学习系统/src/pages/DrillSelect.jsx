@@ -1,6 +1,6 @@
 import { DEFAULT_DRILL_LIMIT, QUICK_DRILL_LIMIT } from '../utils/quiz.js';
 
-export function DrillSelect({ modules = [], drillStatCache, onStartDrill }) {
+export function DrillSelect({ modules = [], drillStatCache, onStartDrill, onStartOralDrill }) {
   return (
     <div data-component="drill-select" className="max-w-[700px] mx-auto">
       <h2 className="text-[22px] font-bold mb-1.5 text-text-strong">🎯 模块刷题</h2>
@@ -8,6 +8,8 @@ export function DrillSelect({ modules = [], drillStatCache, onStartDrill }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6">
         {modules.map(m => {
           const total = m.docs.reduce((n, d) => n + (d.quiz ? d.quiz.length : 0), 0);
+          const hasExpression = m.docs.some(d => (d.quiz || []).some(q => q.type === 'expression'));
+          
           const allQids = [];
           m.docs.forEach((d, di) => (d.quiz || []).forEach((_, qi) => allQids.push(`${m.id}__${di}__${qi}`)));
           const done = allQids.filter(id => drillStatCache[id]).length;
@@ -30,6 +32,15 @@ export function DrillSelect({ modules = [], drillStatCache, onStartDrill }) {
                 <button className="w-fit border border-transparent bg-transparent text-text-secondary rounded-[7px] px-2 py-1 text-[12px] font-semibold cursor-pointer transition-all duration-180 hover:border-primary hover:text-primary" onClick={(e) => { e.stopPropagation(); onStartDrill(m.id, null); }}>
                   全量复盘
                 </button>
+                {hasExpression && (
+                  <button 
+                    className="w-full mt-2 border-0 text-white rounded-[7px] py-1 text-[12px] font-bold cursor-pointer transition-all duration-180 hover:brightness-110 active:scale-95" 
+                    style={{ background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)' }}
+                    onClick={(e) => { e.stopPropagation(); onStartOralDrill(m.id); }}
+                  >
+                    🗣️ 口试表达演练
+                  </button>
+                )}
               </div>
             </div>
           );

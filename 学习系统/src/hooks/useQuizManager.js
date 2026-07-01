@@ -9,6 +9,7 @@ import {
   getDrillQuestions,
   getQuestionByQid,
   isAnswerCorrect,
+  getRawModuleQuestions,
 } from '../utils/quiz.js';
 import { getBreakerCard, getBreakerQuestions } from '../utils/techBreaker.js';
 import { makeQuizReward } from '../utils/pet.js';
@@ -48,6 +49,24 @@ export function useQuizManager({
     startQuiz('doc', moduleId, docIdx, questions);
   }, [startQuiz, showToast]);
 
+  const startDocOralDrill = useCallback((moduleId, docIdx) => {
+    const questions = getDocQuestions(moduleId, docIdx).filter(q => q.type === 'expression');
+    if (!questions.length) {
+      showToast('该篇暂无口试表达题');
+      return;
+    }
+    startQuiz('expression', moduleId, docIdx, questions);
+  }, [startQuiz, showToast]);
+
+  const startModuleOralDrill = useCallback((moduleId) => {
+    const questions = getRawModuleQuestions(moduleId).filter(q => q.type === 'expression');
+    if (!questions.length) {
+      showToast('该模块暂无口试表达题');
+      return;
+    }
+    startQuiz('expression', moduleId, null, questions);
+  }, [startQuiz, showToast]);
+
   const startBreakerQuiz = useCallback((nodeId) => {
     const questions = getBreakerQuestions(nodeId);
     if (!questions.length) {
@@ -82,6 +101,26 @@ export function useQuizManager({
     setQuizState(prev => {
       const q = prev.questions[globalIdx];
       const selections = { ...prev.selections };
+      
+      if (optIdx === null) {
+        delete selections[globalIdx];
+        const answers = { ...prev.answers };
+        let score = prev.score;
+        const wasCorrect = prev.answers[globalIdx] !== undefined && isAnswerCorrect(q, prev.answers[globalIdx]);
+        if (wasCorrect && score > 0) {
+          score--;
+        }
+        delete answers[globalIdx];
+        const submittedPages = prev.submittedPages.filter(p => p !== prev.currentPageIdx);
+        return {
+          ...prev,
+          selections,
+          answers,
+          score,
+          submittedPages
+        };
+      }
+
       if (q.type === 'multiple') {
         const arr = Array.isArray(selections[globalIdx]) ? [...selections[globalIdx]] : [];
         const pos = arr.indexOf(optIdx);
@@ -107,6 +146,8 @@ export function useQuizManager({
       correct: (prev.correct || 0) + (ok ? 1 : 0),
       wrong: (prev.wrong || 0) + (ok ? 0 : 1),
       lastCorrect: ok,
+      lastScore: selected?.score ?? (ok ? 100 : 0),
+      lastKeywords: selected?.keywords ?? [],
       updatedAt: Date.now(),
     };
     setDrillStatCache(cache => ({ ...cache, [qid]: next }));
@@ -136,8 +177,8 @@ export function useQuizManager({
       question: question.question,
       type: question.type,
       userAnswer: selected,
-      correctAnswer: question.answer,
-      explain: question.explain,
+      correctAnswer: question.keywords || question.answer || [],
+      explain: question.explain || question.recommendStructure || '',
       wrongCount: (prev?.wrongCount || 0) + 1,
       createdAt: prev?.createdAt || Date.now(),
       updatedAt: Date.now(),
@@ -346,6 +387,8 @@ export function useQuizManager({
     mobileAnswerCardOpen,
     setMobileAnswerCardOpen,
     startDocQuiz,
+    startDocOralDrill,
+    startModuleOralDrill,
     startBreakerQuiz,
     startDrill,
     startWrongBook,

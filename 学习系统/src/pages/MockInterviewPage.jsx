@@ -147,13 +147,13 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
   // 导入自我介绍必背模板
   const loadSelfIntroTemplate = () => {
     setSelfIntroText(
-`面试官你好，我叫杨中原，有 4 年前端经验，主要做复杂业务平台和低代码表单平台。过去在上海德帆负责低代码平台里的公式规则、插件系统、自开发和一些基础工程化能力。
+`面试官您好，我叫杨中原，有 4 年前端经验，主要做复杂业务平台和低代码表单平台。过去在上海df负责低代码平台里的公式规则、插件系统、自开发、基础组件库、CI 流水线和需求开发技术评审等内容
 
-我比较核心的经验有两块：
-第一是公式规则性能优化。把字段规则从全量无序遍历改为按字段有向依赖关系链式触发，并在保存前做有向图环检测，防止死循环卡死；
-第二是插件系统设计。把非通用核心功能打成独立 UMD，公共依赖通过 externals 复用主包进行主包瘦身，支持在运行时通过后台清单动态下载、生命周期注册与事件内存清理。
+我最主要负责的两块是：
 
-技术栈主要是 Vue 2、Webpack，也在补 Vue 3、前端工程化与 AI Agent 结合业务的方案。现在希望找一个业务和工程复杂度更高的平台，把复杂系统治理、性能优化和 AI 辅助研发这些经验继续用起来。`
+一是公式规则：解决字段联动、显示隐藏、必填只读和数值计算；
+二是插件系统：解决非核心能力的热插拔、按客户需求启动以及主包瘦身。
+技术栈主要是 Vue 2、Vue 3 、vite，最近也在关注 AI Agent 的流式渲染、思考链的展示渲染。现在希望找一个业务和工程复杂度更高的平台，把复杂系统治理、性能优化和 AI 辅助研发这些经验继续用起来`
     );
   };
 
@@ -180,7 +180,7 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
         setSelfIntroResult({
           score: 80,
           detectedHighlights: ['4年经验', '公式规则', '插件系统', 'Vue 2'],
-          advice: '整体结构非常清晰。建议在介绍公式规则时，进一步突出“计算次数下降了80%”等可量化的业绩数据；离职动机部分可以表现得更聚焦于个人成长与挑战。'
+          advice: '整体结构非常清晰。建议在介绍公式规则时，进一步突出“计算次数下降了80%”等可量化的业绩数据，例如『建议修改为：“我主导了公式规则引擎的重构，通过引入依赖收集和缓存机制，使冗余计算次数下降了 80%，显著提升了超长表单的录入流畅度。”』。离职动机部分可以表现得更聚焦于个人成长与挑战。'
         });
         setSelfIntroLoading(false);
       }, 1500);
@@ -189,11 +189,12 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
 
     const systemPrompt = `你是一位专业的前端技术面试官。你的任务是评估候选人自我介绍的内容质量。
 请根据自我介绍核心要素（基本背景如经验年限、核心擅长项目难点如公式规则优化/插件系统、离职原因/未来规划）分析其文本，计算得分并给出专业诊断建议。
+对于 advice 字段：请给出 2 到 3 句极其具体可行、符合研发主管口吻的修改意见。必须针对诊断出的弱项或缺失点，提供至少一个可以直接套用的高分示范表达短句，格式为『建议修改为：“……”』。
 输出必须为严格的 JSON 格式，如下（不要包含 markdown 块或多余解释）：
 {
   "score": 0到100的整数,
   "detectedHighlights": [识别出的核心亮点数组，如"4年经验", "公式规则优化", "插件系统"等],
-  "advice": "给出2到3句极其具体可行、符合研发主管口吻的修改意见"
+  "advice": "诊断意见与高分示范表达短句（如『建议修改为：“……”』）"
 }`;
 
     try {
@@ -240,7 +241,7 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
         setReverseQaResult({
           score: 95,
           answer: '好的，我来解答你的问题。我们团队目前主要负责审批和表单的底层建设，核心的性能瓶颈是在超大字段渲染时的网络等待和渲染卡顿，我们最近正在做预渲染（Prerender）和接口聚合。关于 AI 的落地，我们已经实现了流式 UMD 组件 Schema 动态读取和 Agent 自动推荐。你入职后的首期目标就是负责将插件系统的 IndexedDB 二次加载缓存机制落地，并解决现有 formula 运行时的卡顿回退。',
-          review: '提问非常专业，切中团队痛点。第一题和第二题体现了很好的工程主人翁意识，第三题展现了脚踏实地的执行力。面试官会非常喜欢这类提问。'
+          review: '提问非常专业，切中团队痛点。第一题和第二题体现了很好的工程主人翁意识，第三题展现了脚踏实地的执行力。建议更进一步追问细节，例如『您可以这样提问：“咱们团队目前在落地 Web 端的 Schema 渲染时，首屏的 LCP 指标通常能维持在多少秒以内？对于体积较大的 UMD 包有没有做一些离线缓存策略？”』。面试官会非常喜欢这类提问。'
         });
         setReverseQaLoading(false);
       }, 1500);
@@ -252,11 +253,12 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
 你的任务有两个：
 1. 扮演该高要求技术团队的面试官，真诚、专业地回答用户的反问（模拟回答我们团队当前的性能瓶颈治理方案，如预渲染、接口并行，或 AI 应用落地规划，如 RAG/表单 Agent 检索）；
 2. 点评候选人提问的深度和专业性，指出哪些问题问得很有水平，哪些略显被动，并给出打分。
+对于 review 字段：点评候选人的反问水平，并给出如何提问才能让人眼前一亮的改进建议。必须结合面试公司的技术背景，提供至少一个推荐的高端反问示范短句，格式为『您可以这样提问：“……”』。
 输出必须为严格的 JSON 格式，如下（不要包含 markdown 块或多余解释）：
 {
   "score": 0到100的整数,
   "answer": "你作为面试官对候选人所提问题的模拟解答内容（不少于150字，需体现极强的技术底蕴与团队真实感）",
-  "review": "点评候选人的反问水平，并给出如何提问才能让人眼前一亮的改进建议"
+  "review": "点评内容与高端反问示范短句（如『您可以这样提问：“……”』）"
 }`;
 
     try {
@@ -453,20 +455,20 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
 
       {/* ============================== TAB 1: 全真模拟面试 ============================== */}
       {activeTab === 'interview' && (
-        <div className="bg-surface border border-border/30 rounded-2xl p-6 md:p-8 shadow-md">
+        <div className="w-full">
           {interviewQuestions.length === 0 ? (
-            <div className="text-center py-16 flex flex-col items-center gap-5">
+            <div className="bg-surface border border-border/15 rounded-2xl p-6 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.015)] text-center flex flex-col items-center gap-5">
               <div className="text-[52px]">🎙️</div>
               <h2 className="text-[22px] font-bold text-text-strong m-0">全真智能模拟面试专区</h2>
               <p className="text-text-secondary text-sm max-w-lg leading-relaxed">
-                本模块将引导您进入「自我介绍 $\rightarrow$ 2 道基础拷打 + 2 道项目深挖 $\rightarrow$ 模拟反问面试官」的完整真实闭环。
+                本模块将引导您进入「自我介绍 → 2 道基础拷打 + 2 道项目深挖 → 模拟反问面试官」的完整真实闭环。
                 中途可使用「我已掌握」快速跳题，最终将为您智能评估通过率并生成专属诊断报告。
               </p>
-              <div className="flex items-center gap-3 bg-surface-alt/45 border border-border/30 px-5 py-3 rounded-2xl select-none max-w-md w-full justify-between mt-2 shadow-inner">
+              <div className="flex items-center gap-3 bg-surface-alt/45 border border-border/15 px-5 py-3 rounded-2xl select-none max-w-md w-full justify-between mt-2 shadow-inner">
                 <div className="flex items-center gap-2.5">
                   <span className="text-xl">🤖</span>
                   <div className="flex flex-col text-left">
-                    <span className="text-xs font-extrabold text-text-strong">大厂 AIGC 智能体应用专家专场</span>
+                    <span className="text-xs font-extrabold text-text-strong">大厂 AIGC 智能体 application 专家专场</span>
                     <span className="text-[10px] text-text-secondary/80">开启后 100% 强制锁定 AIGC 专属核心项目深挖考题</span>
                   </div>
                 </div>
@@ -490,33 +492,48 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
               </button>
             </div>
           ) : (
-            <div>
+            <div className="w-full flex flex-col gap-6">
               {/* 面试进度状态指示器 */}
-              <div className="flex items-center justify-between border-b border-border/25 pb-5 mb-6 overflow-x-auto gap-4 flex-wrap">
-                <div className="flex items-center gap-2 select-none">
-                  <span className="text-lg">🧭</span>
-                  <span className="text-[15px] font-bold text-text-strong">Mock 面试流：</span>
+              <div className="flex items-center justify-between border-b border-border/20 pb-4 mb-6 overflow-x-auto gap-4 flex-wrap select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🧭</span>
+                  <span className="text-sm font-bold text-text-strong">Mock 面试流：</span>
                 </div>
-                <div className="flex items-center gap-3 text-xs font-semibold">
-                  <span className={`px-3 py-1.5 rounded-full border ${step === 0 ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-surface-alt/45 text-text-secondary border-border/40'}`}>
-                    1. 自我介绍
-                  </span>
-                  <span className="text-text-secondary/30">➔</span>
-                  <span className={`px-3 py-1.5 rounded-full border ${step === 1 ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-surface-alt/45 text-text-secondary border-border/40'}`}>
-                    2. 基础知识 (${step === 1 ? currentQuestionIdx + 1 : step > 1 ? 2 : 0}/2)
-                  </span>
-                  <span className="text-text-secondary/30">➔</span>
-                  <span className={`px-3 py-1.5 rounded-full border ${step === 2 ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-surface-alt/45 text-text-secondary border-border/40'}`}>
-                    3. 项目深挖 (${step === 2 ? currentQuestionIdx - 1 : step > 2 ? 2 : 0}/2)
-                  </span>
-                  <span className="text-text-secondary/30">➔</span>
-                  <span className={`px-3 py-1.5 rounded-full border ${step === 3 ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-surface-alt/45 text-text-secondary border-border/40'}`}>
-                    4. 模拟反问
-                  </span>
-                  <span className="text-text-secondary/30">➔</span>
-                  <span className={`px-3 py-1.5 rounded-full border ${step === 4 ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-surface-alt/45 text-text-secondary border-border/40'}`}>
-                    5. 复盘评估
-                  </span>
+                <div className="flex items-center gap-4 text-xs font-semibold">
+                  <div className="flex flex-col items-start gap-1 relative py-1">
+                    <span className={`${step === 0 ? 'text-primary font-bold' : 'text-text-secondary/70'}`}>
+                      1. 自我介绍
+                    </span>
+                    {step === 0 && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-full animate-[pulse_1.5s_infinite]" />}
+                  </div>
+                  <span className="text-text-secondary/20">/</span>
+                  <div className="flex flex-col items-start gap-1 relative py-1">
+                    <span className={`${step === 1 ? 'text-primary font-bold' : 'text-text-secondary/70'}`}>
+                      2. 基础知识 ({step === 1 ? currentQuestionIdx + 1 : step > 1 ? 2 : 0}/2)
+                    </span>
+                    {step === 1 && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-full animate-[pulse_1.5s_infinite]" />}
+                  </div>
+                  <span className="text-text-secondary/20">/</span>
+                  <div className="flex flex-col items-start gap-1 relative py-1">
+                    <span className={`${step === 2 ? 'text-primary font-bold' : 'text-text-secondary/70'}`}>
+                      3. 项目深挖 ({step === 2 ? currentQuestionIdx - 1 : step > 2 ? 2 : 0}/2)
+                    </span>
+                    {step === 2 && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-full animate-[pulse_1.5s_infinite]" />}
+                  </div>
+                  <span className="text-text-secondary/20">/</span>
+                  <div className="flex flex-col items-start gap-1 relative py-1">
+                    <span className={`${step === 3 ? 'text-primary font-bold' : 'text-text-secondary/70'}`}>
+                      4. 模拟反问
+                    </span>
+                    {step === 3 && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-full animate-[pulse_1.5s_infinite]" />}
+                  </div>
+                  <span className="text-text-secondary/20">/</span>
+                  <div className="flex flex-col items-start gap-1 relative py-1">
+                    <span className={`${step === 4 ? 'text-primary font-bold' : 'text-text-secondary/70'}`}>
+                      5. 复盘评估
+                    </span>
+                    {step === 4 && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-full animate-[pulse_1.5s_infinite]" />}
+                  </div>
                 </div>
               </div>
 
@@ -597,10 +614,10 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
               {(step === 1 || step === 2) && interviewQuestions.length > 0 && (
                 <div className="animate-slide-up flex flex-col gap-4">
                   {/* 顶端进度与跳过掌握按钮区 */}
-                  <div className="flex items-center justify-between bg-surface-alt/20 p-4 rounded-xl border border-border/20 gap-4 flex-wrap select-none">
+                  <div className="flex items-center justify-between bg-surface-alt/25 p-3.5 rounded-xl gap-4 flex-wrap select-none">
                     <div className="text-xs text-text-secondary">
                       正在面对：
-                      <span className="font-bold text-text-strong">
+                      <span className="font-bold text-text-strong ml-1">
                         {step === 1 ? `2. 基础知识考核 (第 ${currentQuestionIdx + 1} / 2 题)` : `3. 项目亮点深挖 (第 ${currentQuestionIdx - 1} / 2 题)`}
                       </span>
                     </div>
@@ -609,13 +626,13 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleSkipQuestion(true)}
-                        className="px-4 py-2 rounded-lg border border-success/30 bg-success-light/20 text-success hover:bg-success-light/40 font-bold text-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 font-bold text-xs cursor-pointer transition-all active:scale-95 border-0 flex items-center gap-1"
                       >
                         ✓ 我已掌握（算满分）
                       </button>
                       <button
                         onClick={() => handleSkipQuestion(false)}
-                        className="px-4 py-2 rounded-lg border border-warning/30 bg-warning-light/20 text-warning hover:bg-warning-light/40 font-bold text-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 rounded-lg bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 font-bold text-xs cursor-pointer transition-all active:scale-95 border-0 flex items-center gap-1"
                       >
                         ✗ 待巩固，跳过不答
                       </button>

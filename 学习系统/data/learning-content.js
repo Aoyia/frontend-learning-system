@@ -20,8 +20,8 @@ export const LONGFORM_MODULES = [
   ...DOCS_MODULES,
 ];
 
+const hasToken = typeof window !== 'undefined' && !!window.localStorage?.getItem('github_pat');
+
 export const LEARNING_CONTENT = {
-  modules: [
-    ...LONGFORM_MODULES,
-  ],
+  modules: LONGFORM_MODULES.filter(m => hasToken || m.id !== 'project-prep-special'),
 };

@@ -29,7 +29,7 @@ export function MockInterviewPage({ wrongBookCache, onAddToWrongBook, onNavToWro
   // 加载题目
   useEffect(() => {
     setOralQuestions(getOralQuestions());
-  }, []);
+  }, [LEARNING_CONTENT.modules]);
 
   // ==================== 题库列表模式状态 ====================
   const [selectedModule, setSelectedModule] = useState('all');

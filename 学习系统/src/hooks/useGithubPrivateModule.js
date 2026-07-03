@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { LEARNING_CONTENT } from '../../data/learning-content.js';
+import { LEARNING_CONTENT, LONGFORM_MODULES } from '../../data/learning-content.js';
 import { setActiveContent } from '../utils/quiz.js';
 
 export function useGithubPrivateModule({
@@ -15,7 +15,9 @@ export function useGithubPrivateModule({
   const loadPrivateModule = useCallback(async () => {
     if (!isAdmin) {
       const originalLen = LEARNING_CONTENT.modules.length;
-      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
+      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(
+        m => m.id !== 'private-interview' && m.id !== 'project-prep-special'
+      );
       if (LEARNING_CONTENT.modules.length !== originalLen) {
         setActiveContent(LEARNING_CONTENT);
         setContentVersion(v => v + 1);
@@ -29,7 +31,9 @@ export function useGithubPrivateModule({
 
     if (!pat || !repo) {
       const originalLen = LEARNING_CONTENT.modules.length;
-      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
+      LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(
+        m => m.id !== 'private-interview' && m.id !== 'project-prep-special'
+      );
       if (LEARNING_CONTENT.modules.length !== originalLen) {
         setActiveContent(LEARNING_CONTENT);
         setContentVersion(v => v + 1);
@@ -74,6 +78,24 @@ export function useGithubPrivateModule({
 
       LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
       LEARNING_CONTENT.modules.push(privateModule);
+
+      // 重新加载并拼回 project-prep-special
+      if (!LEARNING_CONTENT.modules.some(m => m.id === 'project-prep-special')) {
+        const projectPrepModule = LONGFORM_MODULES.find(m => m.id === 'project-prep-special');
+        if (projectPrepModule) {
+          LEARNING_CONTENT.modules.push(projectPrepModule);
+        }
+      }
+
+      // 对模块进行重新排序保持界面一致
+      LEARNING_CONTENT.modules.sort((a, b) => {
+        if (a.id === 'private-interview') return 1;
+        if (b.id === 'private-interview') return -1;
+        const aIdx = LONGFORM_MODULES.findIndex(m => m.id === a.id);
+        const bIdx = LONGFORM_MODULES.findIndex(m => m.id === b.id);
+        return aIdx - bIdx;
+      });
+
       setActiveContent(LEARNING_CONTENT);
       setContentVersion(v => v + 1);
 

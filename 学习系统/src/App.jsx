@@ -290,8 +290,10 @@ function App() {
         localStorage.removeItem('github_pat');
         localStorage.removeItem('github_repo');
         localStorage.removeItem('github_branch');
-        // 安全抹除内存中的私密模块
-        LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(m => m.id !== 'private-interview');
+        // 安全抹除内存中的私密模块和项目面试准备模块
+        LEARNING_CONTENT.modules = LEARNING_CONTENT.modules.filter(
+          m => m.id !== 'private-interview' && m.id !== 'project-prep-special'
+        );
         setActiveContent(LEARNING_CONTENT);
         reloadLocalCaches(); // 触发重载
       }

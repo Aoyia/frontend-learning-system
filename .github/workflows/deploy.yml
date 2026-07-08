@@ -45,6 +45,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_ADMIN_EMAILS: ${{ secrets.VITE_ADMIN_EMAILS }}
+          VITE_DASHSCOPE_API_KEY: ${{ secrets.VITE_DASHSCOPE_API_KEY }}
+          VITE_CHAT_MODEL: ${{ secrets.VITE_CHAT_MODEL }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
